@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { SignOutButton, SignedIn } from "@clerk/nextjs";
+import { usePathname, useRouter } from "next/navigation";
+import { SignedIn, useClerk } from "@clerk/nextjs";
 import { Leaf, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -37,6 +37,8 @@ function useDarkMode() {
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useClerk();
   const isAdmin = pathname.startsWith("/administrador");
   const links = isAdmin ? adminLinks : publicLinks;
   const { dark, toggle } = useDarkMode();
@@ -72,14 +74,20 @@ export function Navbar() {
           })}
           {isAdmin && (
             <SignedIn>
-              <SignOutButton>
-                <button
-                  type="button"
-                  className="rounded-full px-3.5 py-1.5 text-sm font-medium opacity-80 transition hover:bg-white/10 hover:opacity-100"
-                >
-                  Cerrar sesion
-                </button>
-              </SignOutButton>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await signOut({ redirectUrl: "/" });
+                  } catch {
+                    router.push("/");
+                    router.refresh();
+                  }
+                }}
+                className="rounded-full px-3.5 py-1.5 text-sm font-medium opacity-80 transition hover:bg-white/10 hover:opacity-100"
+              >
+                Cerrar sesion
+              </button>
             </SignedIn>
           )}
           <button

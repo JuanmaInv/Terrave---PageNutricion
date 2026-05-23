@@ -100,7 +100,14 @@ function AdminAuthorized() {
   const { user, isLoaded } = useUser();
   if (!isLoaded) return null;
   const role = (user?.publicMetadata as { role?: string } | undefined)?.role;
-  if (role !== "admin") {
+  const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const hasEmailAccess = Boolean(email && adminEmails.includes(email));
+
+  if (role !== "admin" && !hasEmailAccess) {
     return (
       <div className="flex min-h-screen flex-col">
         <Navbar />

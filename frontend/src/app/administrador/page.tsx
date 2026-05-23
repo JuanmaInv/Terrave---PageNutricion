@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 import { Navbar, Footer } from "@/components/nutrilen/Navbar";
 import { PageLoader, useNavLoader } from "@/components/nutrilen/PageLoader";
 import { toast } from "sonner";
@@ -62,17 +61,7 @@ import {
   exportarExcel,
 } from "@/lib/api";
 
-export const Route = createFileRoute("/administrador")({
-  head: () => ({
-    meta: [
-      { title: "Panel administrativo — NutriLen" },
-      { name: "description", content: "Dashboard académico de análisis sensorial del medallón de lenteja." },
-    ],
-  }),
-  component: AdminRoute,
-});
-
-function AdminRoute() {
+export default function AdminRoute() {
   return (
     <ClientOnly fallback={null}>
       <AdminGate />
@@ -1044,4 +1033,4 @@ function AdminPage() {
     </div>
   );
 }
-export default AdminRoute;
+

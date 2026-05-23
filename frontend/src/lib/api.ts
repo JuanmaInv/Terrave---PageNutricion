@@ -59,18 +59,104 @@ export async function validarAdmin(
 
 export async function exportarPDF(surveys: SurveyResponse[]): Promise<Blob> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const total = surveys.length;
+  const avg = (pick: (s: SurveyResponse) => number) =>
+    total ? Number((surveys.reduce((acc, s) => acc + pick(s), 0) / total).toFixed(2)) : 0;
+  const avgAttr = (key: keyof SurveyResponse["attrs"]) =>
+    total ? Number((surveys.reduce((acc, s) => acc + s.attrs[key], 0) / total).toFixed(2)) : 0;
+  const likedYes = surveys.filter((s) => s.liked === "si").length;
+  const acceptancePct = total ? Number(((likedYes / total) * 100).toFixed(2)) : 0;
 
-  doc.setFontSize(16);
+  const groupCount = (values: string[]) => {
+    const map = new Map<string, number>();
+    for (const value of values) map.set(value, (map.get(value) ?? 0) + 1);
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  };
+
+  const dietDist = groupCount(surveys.map((s) => s.diet));
+  const sexDist = groupCount(surveys.map((s) => s.sex));
+
+  const hourly = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0 }));
+  for (const s of surveys) {
+    const h = new Date(s.date).getHours();
+    if (!Number.isNaN(h)) hourly[h].count += 1;
+  }
+
+  doc.setFontSize(22);
   doc.text("NutriLen - Reporte de Evaluacion Sensorial", 40, 44);
   doc.setFontSize(10);
-  doc.text(`Fecha: ${new Date().toLocaleString("es-AR")}`, 40, 62);
-  doc.text(`Encuestas: ${surveys.length}`, 40, 76);
+  doc.text(`Fecha de emision: ${new Date().toLocaleString("es-AR")}`, 40, 62);
+  doc.text(`Participantes filtrados: ${total}`, 40, 76);
 
   autoTable(doc, {
-    startY: 96,
-    head: [["ID", "Fecha", "Sexo", "Dieta", "Aceptacion", "Gusto", "Recompra", "Recomienda"]],
-    body: surveys.map((s) => [
-      s.id,
+    startY: 90,
+    head: [["KPI", "Valor"]],
+    body: [
+      ["Encuestas completas", String(total)],
+      ["Aceptacion", `${acceptancePct}%`],
+      ["Puntaje global (promedio aceptacion)", String(avg((s) => s.acceptance))],
+      ["Recomendacion promedio", String(avg((s) => s.recommend))],
+    ],
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [101, 56, 43] },
+    columnStyles: { 0: { cellWidth: 280 }, 1: { cellWidth: 220 } },
+  });
+
+  autoTable(doc, {
+    startY: (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY
+      ? (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14
+      : 160,
+    head: [["Atributo", "Promedio (1-5)"]],
+    body: [
+      ["Color", String(avgAttr("color"))],
+      ["Aroma", String(avgAttr("aroma"))],
+      ["Firmeza / Cohesividad", String(avgAttr("firmeza"))],
+      ["Untuosidad", String(avgAttr("untuosidad"))],
+      ["Sabor tostado/cocido", String(avgAttr("sabor_tostado"))],
+      ["Persistencia (Regusto)", String(avgAttr("persistencia"))],
+    ],
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [137, 140, 50] },
+  });
+
+  autoTable(doc, {
+    startY: (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ? (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14
+      : 260,
+    head: [["Distribucion por dieta", "Cantidad", "%"]],
+    body: dietDist.map(([name, count]) => [name, String(count), total ? `${((count / total) * 100).toFixed(2)}%` : "0%"]),
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [244, 178, 35] },
+  });
+
+  autoTable(doc, {
+    startY: (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ? (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
+      : 340,
+    head: [["Distribucion por sexo", "Cantidad", "%"]],
+    body: sexDist.map(([name, count]) => [name, String(count), total ? `${((count / total) * 100).toFixed(2)}%` : "0%"]),
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [255, 109, 14] },
+  });
+
+  autoTable(doc, {
+    startY: (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ? (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
+      : 420,
+    head: [["Hora", "Frecuencia"]],
+    body: hourly.filter((h) => h.count > 0).map((h) => [`${String(h.hour).padStart(2, "0")}h`, String(h.count)]),
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [101, 56, 43] },
+  });
+
+  doc.addPage();
+  doc.setFontSize(14);
+  doc.text("Detalle de encuestas filtradas", 40, 40);
+  autoTable(doc, {
+    startY: 52,
+    head: [["#", "Fecha", "Sexo", "Dieta", "Aceptacion", "Gusto", "Recompra", "Recomienda"]],
+    body: surveys.map((s, i) => [
+      String(i + 1),
       new Date(s.date).toLocaleString("es-AR"),
       s.sex,
       s.diet,
@@ -81,6 +167,41 @@ export async function exportarPDF(surveys: SurveyResponse[]): Promise<Blob> {
     ]),
     styles: { fontSize: 8, cellPadding: 3 },
     headStyles: { fillColor: [101, 56, 43] },
+  });
+
+  const descriptive = surveys
+    .map((s, i) => ({ n: i + 1, text: s.descriptiveComments?.trim() ?? "" }))
+    .filter((x) => x.text.length > 0);
+  const affective = surveys
+    .map((s, i) => ({ n: i + 1, text: s.affectiveComments?.trim() ?? "" }))
+    .filter((x) => x.text.length > 0);
+
+  autoTable(doc, {
+    startY: (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ? (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12
+      : 420,
+    head: [["Observaciones descriptivas", "Comentario"]],
+    body:
+      descriptive.length > 0
+        ? descriptive.map((d) => [`Participante ${d.n}`, d.text])
+        : [["-", "Sin comentarios descriptivos para este filtro"]],
+    styles: { fontSize: 8, cellPadding: 3 },
+    headStyles: { fillColor: [137, 140, 50] },
+    columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 390 } },
+  });
+
+  autoTable(doc, {
+    startY: (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ? (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+      : 520,
+    head: [["Observaciones afectivas", "Comentario"]],
+    body:
+      affective.length > 0
+        ? affective.map((d) => [`Participante ${d.n}`, d.text])
+        : [["-", "Sin comentarios afectivos para este filtro"]],
+    styles: { fontSize: 8, cellPadding: 3 },
+    headStyles: { fillColor: [255, 109, 14] },
+    columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 390 } },
   });
 
   const blob = doc.output("blob");

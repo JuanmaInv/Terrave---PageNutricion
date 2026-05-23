@@ -20,18 +20,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function enviarEncuesta(survey: SurveyResponse): Promise<void> {
   if (hasBackend()) {
-    await request<void>("/encuestas", {
-      method: "POST",
-      body: JSON.stringify(survey),
-    });
-    return;
+    try {
+      await request<void>("/encuestas", {
+        method: "POST",
+        body: JSON.stringify(survey),
+      });
+      return;
+    } catch {
+      // Fallback para entorno de desarrollo si backend no esta disponible
+      saveSurvey(survey);
+      return;
+    }
   }
   saveSurvey(survey);
 }
 
 export async function obtenerEstadisticas(): Promise<SurveyResponse[]> {
   if (hasBackend()) {
-    return await request<SurveyResponse[]>("/estadisticas");
+    try {
+      return await request<SurveyResponse[]>("/estadisticas");
+    } catch {
+      return loadSurveys();
+    }
   }
   return loadSurveys();
 }

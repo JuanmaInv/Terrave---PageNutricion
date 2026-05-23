@@ -55,8 +55,7 @@ import {
   type SurveyResponse,
 } from "@/lib/nutrilen";
 import {
-  encuestasACSV,
-  descargarBlob,
+    descargarBlob,
   exportarPDF,
   exportarExcel,
 } from "@/lib/api";
@@ -359,16 +358,9 @@ function AdminPage() {
               type="button"
               onClick={async () => {
                 try {
-                  const blob = await exportarPDF();
-                  if (blob) {
-                    descargarBlob(blob, `nutrilen-dashboard-${Date.now()}.pdf`);
-                    toast.success("PDF descargado");
-                  } else {
-                    toast.message("Abriendo vista de impresión…", {
-                      description: "Usá 'Guardar como PDF' en el diálogo de impresión.",
-                    });
-                    window.print();
-                  }
+                  const blob = await exportarPDF(filtered);
+                  descargarBlob(blob, `nutrilen-dashboard-${Date.now()}.pdf`);
+                  toast.success("PDF descargado");
                 } catch {
                   toast.error("No se pudo exportar el PDF.");
                 }
@@ -382,13 +374,9 @@ function AdminPage() {
               type="button"
               onClick={async () => {
                 try {
-                  let blob = await exportarExcel();
-                  if (!blob) {
-                    const csv = encuestasACSV(filtered);
-                    blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-                  }
-                  descargarBlob(blob, `nutrilen-encuestas-${Date.now()}.csv`);
-                  toast.success("Archivo Excel/CSV descargado");
+                  const blob = await exportarExcel(filtered);
+                  descargarBlob(blob, `nutrilen-encuestas-${Date.now()}.xlsx`);
+                  toast.success("Excel descargado");
                 } catch {
                   toast.error("No se pudo exportar el archivo.");
                 }
@@ -1040,4 +1028,6 @@ function AdminPage() {
     </div>
   );
 }
+
+
 

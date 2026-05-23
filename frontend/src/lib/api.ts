@@ -1,19 +1,6 @@
-/**
- * Servicio API centralizado de NutriLen.
- * Todas las llamadas al backend NestJS pasan por aquí.
- *
- * Endpoints previstos:
- *   POST /encuestas        → enviar respuesta de encuesta
- *   GET  /estadisticas     → obtener datos del dashboard
- *   GET  /admin/me         → validar usuario admin
- *   GET  /export/pdf       → exportar dashboard a PDF
- *   GET  /export/excel     → exportar datos a Excel
- *
- * Mientras no exista backend, las funciones operan en modo "mock" sobre
- * localStorage (ver src/lib/nutrilen.ts) y los endpoints quedan listos
- * para apuntar a VITE_API_URL cuando el backend esté disponible.
- */
-
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import { loadSurveys, saveSurvey, type SurveyResponse } from "./nutrilen";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -31,7 +18,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-/** POST /encuestas */
 export async function enviarEncuesta(survey: SurveyResponse): Promise<void> {
   if (hasBackend()) {
     await request<void>("/encuestas", {
@@ -40,11 +26,9 @@ export async function enviarEncuesta(survey: SurveyResponse): Promise<void> {
     });
     return;
   }
-  // Fallback mock → localStorage
   saveSurvey(survey);
 }
 
-/** GET /estadisticas */
 export async function obtenerEstadisticas(): Promise<SurveyResponse[]> {
   if (hasBackend()) {
     return await request<SurveyResponse[]>("/estadisticas");
@@ -52,7 +36,6 @@ export async function obtenerEstadisticas(): Promise<SurveyResponse[]> {
   return loadSurveys();
 }
 
-/** GET /admin/me */
 export async function validarAdmin(
   token?: string,
 ): Promise<{ isAdmin: boolean; email?: string }> {
@@ -61,39 +44,102 @@ export async function validarAdmin(
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
   }
-  // En modo mock la validación real se hace con Clerk publicMetadata.role === "admin"
   return { isAdmin: true };
 }
 
-/** GET /export/pdf — devuelve un Blob para descargar */
-export async function exportarPDF(): Promise<Blob | null> {
-  if (hasBackend()) {
-    try {
-      const res = await fetch(`${API_URL}/export/pdf`);
-      if (!res.ok) return null;
-      return await res.blob();
-    } catch {
-      return null;
-    }
-  }
-  return null; // sin backend → se usa fallback local (window.print)
+export async function exportarPDF(surveys: SurveyResponse[]): Promise<Blob> {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+  doc.setFontSize(16);
+  doc.text("NutriLen - Reporte de Evaluacion Sensorial", 40, 44);
+  doc.setFontSize(10);
+  doc.text(`Fecha: ${new Date().toLocaleString("es-AR")}`, 40, 62);
+  doc.text(`Encuestas: ${surveys.length}`, 40, 76);
+
+  autoTable(doc, {
+    startY: 96,
+    head: [["ID", "Fecha", "Sexo", "Dieta", "Aceptacion", "Gusto", "Recompra", "Recomienda"]],
+    body: surveys.map((s) => [
+      s.id,
+      new Date(s.date).toLocaleString("es-AR"),
+      s.sex,
+      s.diet,
+      String(s.acceptance),
+      s.liked,
+      s.consumeAgain,
+      String(s.recommend),
+    ]),
+    styles: { fontSize: 8, cellPadding: 3 },
+    headStyles: { fillColor: [101, 56, 43] },
+  });
+
+  const blob = doc.output("blob");
+  return blob;
 }
 
-/** GET /export/excel — devuelve un Blob para descargar */
-export async function exportarExcel(): Promise<Blob | null> {
-  if (hasBackend()) {
-    try {
-      const res = await fetch(`${API_URL}/export/excel`);
-      if (!res.ok) return null;
-      return await res.blob();
-    } catch {
-      return null;
-    }
+export async function exportarExcel(surveys: SurveyResponse[]): Promise<Blob> {
+  const workbook = XLSX.utils.book_new();
+
+  const rows = surveys.map((s) => ({
+    id: s.id,
+    fecha: s.date,
+    sexo: s.sex,
+    dieta: s.diet,
+    color: s.attrs.color,
+    aroma: s.attrs.aroma,
+    firmeza: s.attrs.firmeza,
+    untuosidad: s.attrs.untuosidad,
+    sabor_tostado: s.attrs.sabor_tostado,
+    persistencia: s.attrs.persistencia,
+    comentarios_descriptivos: s.descriptiveComments ?? "",
+    aceptacion: s.acceptance,
+    gusto: s.liked,
+    consumiria_nuevamente: s.consumeAgain,
+    recomendacion: s.recommend,
+    comentarios_afectivos: s.affectiveComments ?? "",
+  }));
+
+  const detailSheet = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(workbook, detailSheet, "Encuestas");
+
+  const byDiet = new Map<string, number>();
+  const bySex = new Map<string, number>();
+  for (const s of surveys) {
+    byDiet.set(s.diet, (byDiet.get(s.diet) ?? 0) + 1);
+    bySex.set(s.sex, (bySex.get(s.sex) ?? 0) + 1);
   }
-  return null; // sin backend → se usa fallback local (CSV)
+
+  const resumen = [
+    { metrica: "Total encuestas", valor: surveys.length },
+    {
+      metrica: "Aceptacion promedio",
+      valor:
+        surveys.length === 0
+          ? 0
+          : Number(
+              (
+                surveys.reduce((acc, s) => acc + s.acceptance, 0) / surveys.length
+              ).toFixed(2),
+            ),
+    },
+  ];
+  const resumenSheet = XLSX.utils.json_to_sheet(resumen);
+  XLSX.utils.book_append_sheet(workbook, resumenSheet, "Resumen");
+
+  const dietRows = [...byDiet.entries()].map(([dieta, cantidad]) => ({ dieta, cantidad }));
+  const dietSheet = XLSX.utils.json_to_sheet(dietRows);
+  XLSX.utils.book_append_sheet(workbook, dietSheet, "Datos_Graf_Dieta");
+
+  const sexRows = [...bySex.entries()].map(([sexo, cantidad]) => ({ sexo, cantidad }));
+  const sexSheet = XLSX.utils.json_to_sheet(sexRows);
+  XLSX.utils.book_append_sheet(workbook, sexSheet, "Datos_Graf_Sexo");
+
+  const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  return new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 }
 
-/** Descarga un Blob como archivo. */
 export function descargarBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -105,7 +151,6 @@ export function descargarBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/** Genera un CSV (Excel-compatible) a partir de las encuestas. */
 export function encuestasACSV(surveys: SurveyResponse[]): string {
   const headers = [
     "id",

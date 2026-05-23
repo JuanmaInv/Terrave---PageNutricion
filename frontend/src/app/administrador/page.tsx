@@ -1,9 +1,11 @@
-import { createFileRoute, ClientOnly } from "@tanstack/react-router";
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { Navbar, Footer } from "@/components/nutrilen/Navbar";
 import { PageLoader, useNavLoader } from "@/components/nutrilen/PageLoader";
 import { toast } from "sonner";
-import { SignedIn, SignedOut, SignIn, useUser } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, SignIn, useUser } from "@clerk/nextjs";
 import {
   Users,
   ClipboardCheck,
@@ -133,6 +135,18 @@ const VANDYKE = "#65382B";
 const MOSS = "#898C32";
 const PUMPKIN = "#FF6D0E";
 const ORANGE = "#F4B223";
+
+function ClientOnly({
+  children,
+  fallback = null,
+}: {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? <>{children}</> : <>{fallback}</>;
+}
 
 function useCountUp(target: number, duration = 900) {
   const [val, setVal] = useState(0);
@@ -1030,3 +1044,4 @@ function AdminPage() {
     </div>
   );
 }
+export default AdminRoute;

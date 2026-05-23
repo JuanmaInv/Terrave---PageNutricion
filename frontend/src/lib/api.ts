@@ -16,7 +16,7 @@
 
 import { loadSurveys, saveSurvey, type SurveyResponse } from "./nutrilen";
 
-export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 function hasBackend(): boolean {
   return Boolean(API_URL && API_URL.trim().length > 0);

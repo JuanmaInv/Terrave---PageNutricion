@@ -1,4 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+"use client";
+
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Navbar, Footer } from "@/components/nutrilen/Navbar";
 import { PageLoader, useNavLoader } from "@/components/nutrilen/PageLoader";
@@ -34,20 +36,6 @@ import {
   type SurveyResponse,
 } from "@/lib/nutrilen";
 import { enviarEncuesta } from "@/lib/api";
-
-export const Route = createFileRoute("/encuesta")({
-  head: () => ({
-    meta: [
-      { title: "Encuesta sensorial — NutriLen" },
-      {
-        name: "description",
-        content:
-          "Evaluación sensorial descriptiva y afectiva del medallón de lenteja, en 3 pasos.",
-      },
-    ],
-  }),
-  component: EncuestaPage,
-});
 
 const ATTR_ICONS: Record<AttrKey, React.ComponentType<{ className?: string }>> = {
   color: Palette,
@@ -242,7 +230,7 @@ function SliderCard({
   );
 }
 
-function EncuestaPage() {
+export default function EncuestaPage() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const { show: showLoader, run: runWithLoader } = useNavLoader(1200);
@@ -353,7 +341,7 @@ function EncuestaPage() {
             el medallón de lenteja.
           </p>
           <Link
-            to="/"
+            href="/"
             className="mt-10 inline-flex items-center gap-2 rounded-full bg-[color:var(--moss)] px-7 py-3.5 text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)]"
           >
             <ArrowLeft className="h-4 w-4" />

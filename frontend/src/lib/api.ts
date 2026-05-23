@@ -68,9 +68,13 @@ export async function validarAdmin(
 /** GET /export/pdf — devuelve un Blob para descargar */
 export async function exportarPDF(): Promise<Blob | null> {
   if (hasBackend()) {
-    const res = await fetch(`${API_URL}/export/pdf`);
-    if (!res.ok) throw new Error(`Export PDF ${res.status}`);
-    return await res.blob();
+    try {
+      const res = await fetch(`${API_URL}/export/pdf`);
+      if (!res.ok) return null;
+      return await res.blob();
+    } catch {
+      return null;
+    }
   }
   return null; // sin backend → se usa fallback local (window.print)
 }
@@ -78,9 +82,13 @@ export async function exportarPDF(): Promise<Blob | null> {
 /** GET /export/excel — devuelve un Blob para descargar */
 export async function exportarExcel(): Promise<Blob | null> {
   if (hasBackend()) {
-    const res = await fetch(`${API_URL}/export/excel`);
-    if (!res.ok) throw new Error(`Export Excel ${res.status}`);
-    return await res.blob();
+    try {
+      const res = await fetch(`${API_URL}/export/excel`);
+      if (!res.ok) return null;
+      return await res.blob();
+    } catch {
+      return null;
+    }
   }
   return null; // sin backend → se usa fallback local (CSV)
 }

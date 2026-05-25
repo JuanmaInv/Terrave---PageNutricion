@@ -14,22 +14,18 @@ const publicLinks = [
 const adminLinks = [{ href: "/administrador", label: "Estadisticas" }] as const;
 
 function useDarkMode() {
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("nutrilen.theme") === "dark";
+  });
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("nutrilen.theme");
-    const prefers = saved === "dark";
-    setDark(prefers);
-    document.documentElement.classList.toggle("dark", prefers);
-  }, []);
+    document.documentElement.classList.toggle("dark", dark);
+    window.localStorage.setItem("nutrilen.theme", dark ? "dark" : "light");
+  }, [dark]);
 
   const toggle = () => {
-    setDark((current) => {
-      const next = !current;
-      document.documentElement.classList.toggle("dark", next);
-      window.localStorage.setItem("nutrilen.theme", next ? "dark" : "light");
-      return next;
-    });
+    setDark((current) => !current);
   };
 
   return { dark, toggle };

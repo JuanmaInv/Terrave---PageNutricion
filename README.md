@@ -23,3 +23,8 @@ Playwright + Unit Testing
 ### Deploy
 Frontend: Vercel  
 Backend: Render
+
+## Onboarding Tecnico
+- Seguir: `docs/PROMPT_TECNICO_ONBOARDING.md`
+- Validacion obligatoria antes de push (en `frontend/`):
+  - `pnpm ci:check`

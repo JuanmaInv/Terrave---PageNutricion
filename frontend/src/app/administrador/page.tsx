@@ -138,9 +138,7 @@ function ClientOnly({
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted ? <>{children}</> : <>{fallback}</>;
+  return <>{children ?? fallback}</>;
 }
 
 function useCountUp(target: number, duration = 900) {
@@ -177,8 +175,13 @@ function AnimatedBar({ value, color, delay = 0 }: { value: number; color: string
 }
 
 function AdminPage() {
-  const [tick, setTick] = useState(0);
-  const [data, setData] = useState<SurveyResponse[]>([]);
+  const [data, setData] = useState<SurveyResponse[]>(() => {
+    ensureSeed();
+    return loadSurveys();
+  });
+  useEffect(() => {
+    ensureSeed();
+  }, []);
   const { show: showLoader, run: runWithLoader, setShow: setLoader } = useNavLoader(1200);
 
   const [fDiet, setFDiet] = useState<Diet | "all">("all");
@@ -187,11 +190,6 @@ function AdminPage() {
   const [fTo, setFTo] = useState<string>("");
 
   const [activeAttrs, setActiveAttrs] = useState<AttrKey[]>(ATTRIBUTES.map((a) => a.key));
-
-  useEffect(() => {
-    ensureSeed();
-    setData(loadSurveys());
-  }, [tick]);
 
   // Initial mount loader (navigation feel)
   useEffect(() => {
@@ -304,7 +302,7 @@ function AdminPage() {
 
   function refresh() {
     runWithLoader(() => {
-      setTick((t) => t + 1);
+      setData(loadSurveys());
       toast.success("Estadísticas actualizadas");
     });
   }

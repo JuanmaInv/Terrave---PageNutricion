@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+Nutrilen-Lovable/env
 
 # Dependencies
 node_modules

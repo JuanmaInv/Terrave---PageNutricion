@@ -1,0 +1,8 @@
+allowBuilds:
+  '@clerk/shared': true
+  core-js: true
+  sharp: true
+  unrs-resolver: true
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver

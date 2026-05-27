@@ -152,11 +152,6 @@ function ChoiceCard<T extends string>({
             </span>
             <span className="flex-1">
               <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--vandyke)]">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: o.color }}
-                  aria-hidden
-                />
                 {o.label}
               </span>
               {o.hint && <span className="block text-xs text-muted-foreground">{o.hint}</span>}

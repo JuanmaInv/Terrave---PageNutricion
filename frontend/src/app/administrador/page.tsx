@@ -34,8 +34,6 @@ import {
   Cell,
   Tooltip,
   Legend,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -74,8 +72,8 @@ function AdminGate() {
         <div className="flex min-h-screen items-center justify-center bg-[color:var(--background)] px-4">
           <div className="w-full max-w-md">
             <div className="mb-6 text-center">
-              <h1 className="font-serif text-2xl font-semibold text-foreground">NutriLen Â· Panel admin</h1>
-              <p className="mt-1 text-sm text-muted-foreground">IniciÃ¡ sesiÃ³n para acceder a las estadÃ­sticas.</p>
+              <h1 className="font-serif text-2xl font-semibold text-foreground">NutriLen · Panel admin</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Iniciá sesión para acceder a las estadísticas.</p>
             </div>
             <SignIn
               routing="hash"
@@ -111,10 +109,10 @@ function AdminAuthorized() {
         <Navbar />
         <main className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-6 py-20">
           <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
-            <h2 className="font-serif text-2xl font-semibold text-foreground">Esta secciÃ³n es solo para el equipo NutriLen</h2>
+            <h2 className="font-serif text-2xl font-semibold text-foreground">Esta sección es solo para el equipo NutriLen</h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              Tu cuenta no tiene permisos para visualizar el panel de estadÃ­sticas.
-              Si sos parte del equipo y necesitÃ¡s acceso, contactÃ¡ al administrador del proyecto.
+              Tu cuenta no tiene permisos para visualizar el panel de estadísticas.
+              Si sos parte del equipo y necesitás acceso, contactá al administrador del proyecto.
             </p>
           </div>
         </main>
@@ -129,6 +127,15 @@ const VANDYKE = "#65382B";
 const MOSS = "#898C32";
 const PUMPKIN = "#FF6D0E";
 const ORANGE = "#F4B223";
+
+const ATTRIBUTE_SHORT_LABELS: Record<AttrKey, string> = {
+  color: "Color",
+  aroma: "Aroma",
+  firmeza: "Firmeza",
+  untuosidad: "Untuosidad",
+  sabor_tostado: "Sabor",
+  persistencia: "Persistencia",
+};
 
 function ClientOnly({
   children,
@@ -174,7 +181,7 @@ function AnimatedBar({ value, color, delay = 0 }: { value: number; color: string
 }
 
 function AdminPage() {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [data, setData] = useState<SurveyResponse[]>([]);
   const { show: showLoader, run: runWithLoader, setShow: setLoader } = useNavLoader(1200);
 
@@ -211,7 +218,12 @@ function AdminPage() {
     return Math.round(v * 10) / 10;
   }
 
-  const sensorial = ATTRIBUTES.map((a) => ({ key: a.key, metric: a.label, value: avg(a.key) }));
+  const sensorial = ATTRIBUTES.map((a) => ({
+    key: a.key,
+    metric: a.label,
+    metricShort: ATTRIBUTE_SHORT_LABELS[a.key],
+    value: avg(a.key),
+  }));
   // Radar: only include selected attributes (so deselected ones disappear entirely)
   const radarData = sensorial.filter((d) => activeAttrs.includes(d.key));
   const barsData = radarData;
@@ -249,7 +261,7 @@ function AdminPage() {
     };
   });
 
-  // Frecuencia de respuestas por hora del dÃ­a (0â€“23)
+  // Frecuencia de respuestas por hora del día (0-23)
   const hourlyDist = useMemo(() => {
     const buckets = Array.from({ length: 24 }, (_, h) => ({
       hour: h,
@@ -295,13 +307,11 @@ function AdminPage() {
   const animCount = useCountUp(acceptancePct);
 
   async function fetchStats() {
+    if (!isLoaded || !isSignedIn) return;
     const token = await getToken();
+    if (!token) throw new Error("No se pudo obtener token de administracion.");
     const rows = await obtenerEstadisticas({
-      token: token ?? undefined,
-      diet: fDiet,
-      sex: fSex,
-      from: fFrom || undefined,
-      to: fTo || undefined,
+      token,
     });
     setData(rows);
   }
@@ -311,8 +321,12 @@ function AdminPage() {
       try {
         await fetchStats();
         toast.success("Estadisticas actualizadas");
-      } catch {
-        toast.error("No se pudieron actualizar las estadisticas.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron actualizar las estadisticas.",
+        );
       }
     });
   }
@@ -327,15 +341,20 @@ function AdminPage() {
   const hasFilters = fDiet !== "all" || fSex !== "all" || fFrom || fTo;
 
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
     runWithLoader(async () => {
       try {
         await fetchStats();
-      } catch {
-        toast.error("No se pudieron cargar estadisticas del backend.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar estadisticas del backend.",
+        );
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fDiet, fSex, fFrom, fTo]);
+  }, [fDiet, fSex, fFrom, fTo, isLoaded, isSignedIn]);
 
   const lastUpdate = new Date().toLocaleString("es-AR", {
     day: "2-digit",
@@ -346,28 +365,28 @@ function AdminPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <div className="min-h-screen w-full max-w-[100svw] overflow-x-hidden bg-background text-foreground font-sans">
       <Navbar />
       <PageLoader show={showLoader} />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:py-14">
+      <main className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-7 sm:px-6 sm:py-10 lg:py-14">
         {/* Header */}
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+        <header className="min-w-0 space-y-5 lg:flex lg:items-end lg:justify-between lg:gap-6 lg:space-y-0">
+          <div className="min-w-0 max-w-3xl">
             <span className="inline-block rounded-full bg-[color:var(--orange-yellow)]/25 px-3 py-1 text-xs font-medium text-[color:var(--vandyke)]">
               Panel administrativo
             </span>
-            <h1 className="mt-4 font-serif text-4xl font-semibold tracking-tight text-[color:var(--vandyke)] sm:text-5xl">
-              Resultados de la evaluaciÃ³n
+            <h1 className="mt-4 max-w-full break-words font-serif text-3xl font-semibold leading-[1.02] tracking-tight text-[color:var(--vandyke)] min-[420px]:text-4xl sm:text-5xl">
+              Resultados de la evaluación
             </h1>
-            <p className="mt-3 max-w-2xl text-base text-muted-foreground">
-              Dashboard acadÃ©mico de anÃ¡lisis sensorial del medallÃ³n de lenteja.
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+              Dashboard académico de análisis sensorial del medallón de lenteja.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[360px]">
             <button
               type="button"
               onClick={refresh}
-              className="inline-flex items-center gap-2 rounded-full bg-[color:var(--moss)] px-4 py-2 text-xs font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)] disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--moss)] px-4 py-2.5 text-xs font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)] disabled:opacity-50"
               disabled={showLoader}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${showLoader ? "animate-spin" : ""}`} />
@@ -384,7 +403,7 @@ function AdminPage() {
                   toast.error("No se pudo exportar el PDF.");
                 }
               }}
-              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-4 py-2 text-xs font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-4 py-2.5 text-xs font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40"
             >
               <FileText className="h-3.5 w-3.5" />
               Exportar PDF
@@ -400,7 +419,7 @@ function AdminPage() {
                   toast.error("No se pudo exportar el archivo.");
                 }
               }}
-              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-4 py-2 text-xs font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-4 py-2.5 text-xs font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Exportar Excel
@@ -409,18 +428,18 @@ function AdminPage() {
         </header>
 
         {/* Filters */}
-        <section className="mt-8 rounded-3xl border border-border/60 bg-card p-5 shadow-[var(--shadow-card)]">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex items-center gap-2 pr-2 text-[color:var(--vandyke)]">
+        <section className="mt-8 min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[auto_repeat(4,minmax(0,1fr))_auto] lg:items-end">
+            <div className="flex items-center gap-2 text-[color:var(--vandyke)] sm:col-span-2 lg:col-span-1">
               <Filter className="h-4 w-4 text-[color:var(--pumpkin)]" />
               <span className="text-sm font-semibold">Filtros</span>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Dieta</label>
               <select
                 value={fDiet}
                 onChange={(e) => setFDiet(e.target.value as Diet | "all")}
-                className="rounded-xl border border-border bg-background px-3 py-2 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
               >
                 <option value="all">Todas</option>
                 {DIET_OPTIONS.map((d) => (
@@ -428,12 +447,12 @@ function AdminPage() {
                 ))}
               </select>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sexo</label>
               <select
                 value={fSex}
                 onChange={(e) => setFSex(e.target.value as Sex | "all")}
-                className="rounded-xl border border-border bg-background px-3 py-2 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
               >
                 <option value="all">Todos</option>
                 {SEX_OPTIONS.map((s) => (
@@ -441,50 +460,50 @@ function AdminPage() {
                 ))}
               </select>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Desde</label>
               <input
                 type="date"
                 value={fFrom}
                 onChange={(e) => setFFrom(e.target.value)}
-                className="rounded-xl border border-border bg-background px-3 py-2 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
               />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Hasta</label>
               <input
                 type="date"
                 value={fTo}
                 onChange={(e) => setFTo(e.target.value)}
-                className="rounded-xl border border-border bg-background px-3 py-2 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
               />
             </div>
             {hasFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="ml-auto text-xs font-semibold text-[color:var(--pumpkin)] hover:underline"
+                className="w-full rounded-full px-3 py-2 text-center text-xs font-semibold text-[color:var(--pumpkin)] hover:bg-[color:var(--pumpkin)]/10 sm:w-auto lg:justify-self-end"
               >
                 Limpiar filtros
               </button>
             )}
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Mostrando <strong className="text-[color:var(--vandyke)]">{total}</strong> participantes Â· Ãšltima actualizaciÃ³n: {lastUpdate}
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+            Mostrando <strong className="text-[color:var(--vandyke)]">{total}</strong> participantes · Última actualización: {lastUpdate}
           </p>
         </section>
 
         {/* KPIs */}
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mt-6 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
             { icon: Users, label: "Participantes", value: total, color: MOSS },
             { icon: ClipboardCheck, label: "Encuestas completas", value: total, color: ORANGE },
             { icon: Star, label: "Puntaje global", value: globalScore.toFixed(1), color: VANDYKE },
-            { icon: ThumbsUp, label: "AceptaciÃ³n", value: `${acceptancePct}%`, color: PUMPKIN },
+            { icon: ThumbsUp, label: "Aceptación", value: `${acceptancePct}%`, color: PUMPKIN },
           ].map((s) => (
             <div
               key={s.label}
-              className="rounded-2xl border border-border/60 bg-card p-5 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-soft)]"
+              className="rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-soft)] sm:p-5"
             >
               <div
                 className="grid h-10 w-10 place-items-center rounded-xl"
@@ -504,17 +523,17 @@ function AdminPage() {
         </section>
 
         {/* Radar + Promedios */}
-        <section className="mt-8 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
+        <section className="mt-8 grid min-w-0 gap-6 xl:grid-cols-2">
+          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
             <div>
               <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
                 Perfil sensorial
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                EvaluaciÃ³n promedio por atributo (escala 1â€“5). TocÃ¡ los chips para activar o desactivar atributos.
+                Evaluación promedio por atributo (escala 1-5). Tocá los chips para activar o desactivar atributos.
               </p>
             </div>
-            <div className="mt-4 flex flex-wrap gap-1.5">
+            <div className="mt-4 flex min-w-0 flex-wrap gap-1.5">
               {ATTRIBUTES.map((a) => {
                 const on = activeAttrs.includes(a.key);
                 return (
@@ -525,7 +544,7 @@ function AdminPage() {
                         s.includes(a.key) ? s.filter((x) => x !== a.key) : [...s, a.key],
                       )
                     }
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition sm:px-3 sm:text-xs ${
                       on
                         ? "border-[color:var(--moss)] bg-[color:var(--moss)] text-[color:var(--primary-foreground)]"
                         : "border-border bg-card text-muted-foreground hover:border-[color:var(--moss)]/40"
@@ -536,14 +555,18 @@ function AdminPage() {
                 );
               })}
             </div>
-            <div className="mt-4 h-80">
+            <div className="mt-4 h-80 sm:h-96">
               <ClientOnly fallback={<div className="h-full" />}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData} outerRadius="78%">
+                  <RadarChart
+                    data={radarData}
+                    outerRadius="62%"
+                    margin={{ top: 24, right: 38, bottom: 24, left: 38 }}
+                  >
                     <PolarGrid stroke="#65382B22" />
                     <PolarAngleAxis
-                      dataKey="metric"
-                      tick={{ fill: VANDYKE, fontSize: 11, fontWeight: 500 }}
+                      dataKey="metricShort"
+                      tick={{ fill: VANDYKE, fontSize: 11, fontWeight: 700 }}
                     />
                     <PolarRadiusAxis
                       angle={90}
@@ -574,7 +597,7 @@ function AdminPage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
+          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
             <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
               Promedios por atributo
             </h2>
@@ -603,64 +626,56 @@ function AdminPage() {
           </div>
         </section>
 
-        {/* Bar chart */}
+        {/* Attribute comparison */}
         <section className="mt-6">
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
+          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
             <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
               Comparativa de atributos
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Atributos activos en el perfil sensorial.
             </p>
-            <div className="mt-6 h-72">
-              <ClientOnly fallback={<div className="h-full" />}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barsData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                    <CartesianGrid stroke="#65382B14" vertical={false} />
-                    <XAxis
-                      dataKey="metric"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: VANDYKE, fontSize: 11, fontWeight: 500 }}
-                    />
-                    <YAxis
-                      domain={[0, 5]}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#65382B88", fontSize: 11 }}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "#65382B0A" }}
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid #65382B22",
-                        background: "var(--card)",
-                      }}
-                      formatter={(v: number) => [`${Number(v).toFixed(1)} / 5`, "Promedio"]}
-                    />
-                    <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={56}>
-                      {barsData.map((d, i) => (
-                        <Cell key={d.metric} fill={i % 2 === 0 ? MOSS : ORANGE} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ClientOnly>
-            </div>
+            <ul className="mt-6 space-y-4">
+              {barsData.map((d, i) => {
+                const color = i % 2 === 0 ? MOSS : ORANGE;
+                return (
+                  <li key={d.metric}>
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="min-w-0 truncate font-semibold text-[color:var(--vandyke)]">
+                        {d.metric}
+                      </span>
+                      <span className="shrink-0 font-serif text-lg font-semibold" style={{ color }}>
+                        {d.value.toFixed(1)}
+                        <span className="ml-1 text-xs font-sans font-medium text-muted-foreground">/ 5</span>
+                      </span>
+                    </div>
+                    <div className="mt-2 h-3 overflow-hidden rounded-full bg-[color:var(--cream-deep)]">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${(d.value / 5) * 100}%`,
+                          background: `linear-gradient(to right, ${color}, ${PUMPKIN})`,
+                        }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </section>
 
         {/* Frecuencia horaria */}
         <section className="mt-6">
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
-            <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
               <div>
                 <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
                   Frecuencia de consumo por hora
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Cantidad de encuestas completadas segÃºn la hora del dÃ­a (0â€“23 h). Permite identificar
-                  en quÃ© franja horaria se prefiere consumir el medallÃ³n de lenteja.
+                  Cantidad de encuestas completadas según la hora del día (0-23 h). Permite identificar
+                  en qué franja horaria se prefiere consumir el medallón de lenteja.
                 </p>
               </div>
               <div className="hidden items-center gap-2 rounded-full bg-[color:var(--orange-yellow)]/20 px-3 py-1 text-xs font-semibold text-[color:var(--vandyke)] sm:inline-flex">
@@ -668,12 +683,13 @@ function AdminPage() {
                 {hasHourly ? `Pico: ${peakHour.label} (${peakHour.count})` : "Sin datos"}
               </div>
             </div>
-            <div className="mt-6 h-72">
+            <div className="mt-6 max-w-full overflow-hidden pb-2">
               <ClientOnly fallback={<div className="h-full" />}>
+                <div className="h-72 w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={hourlyDist}
-                    margin={{ top: 8, right: 16, left: -16, bottom: 0 }}
+                    margin={{ top: 8, right: 4, left: -28, bottom: 0 }}
                   >
                     <defs>
                       <linearGradient id="hourlyFill" x1="0" y1="0" x2="0" y2="1">
@@ -686,8 +702,8 @@ function AdminPage() {
                       dataKey="label"
                       axisLine={false}
                       tickLine={false}
-                      interval={1}
-                      tick={{ fill: VANDYKE, fontSize: 10, fontWeight: 500 }}
+                      interval={3}
+                      tick={{ fill: VANDYKE, fontSize: 9, fontWeight: 500 }}
                     />
                     <YAxis
                       allowDecimals={false}
@@ -724,24 +740,25 @@ function AdminPage() {
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
+                </div>
               </ClientOnly>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Eje X: hora del dÃ­a Â· Eje Y: nÃºmero de encuestas registradas en esa franja.
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Las marcas inferiores indican la hora del día; cuanto más alta aparece la línea, mayor fue la cantidad de encuestas registradas en esa franja.
             </p>
           </div>
         </section>
 
         {/* Dietas + Sexo */}
-        <section className="mt-6 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
+        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-2">
+          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
             <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              DistribuciÃ³n de dietas
+              Distribución de dietas
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              ComposiciÃ³n de la muestra evaluada ({total} participantes).
+              Composición de la muestra evaluada ({total} participantes).
             </p>
-            <div className="mt-4 h-64">
+            <div className="mt-4 h-72 sm:h-64">
               <ClientOnly fallback={<div className="h-full" />}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -792,76 +809,50 @@ function AdminPage() {
             </ul>
           </div>
 
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
+          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
             <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              DistribuciÃ³n por sexo biolÃ³gico
+              Distribución por sexo biológico
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              ComposiciÃ³n demogrÃ¡fica de la muestra.
+              Composición demográfica de la muestra.
             </p>
-            <div className="mt-6 h-56">
-              <ClientOnly fallback={<div className="h-full" />}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={sexDist}
-                    layout="vertical"
-                    margin={{ top: 0, right: 16, left: 8, bottom: 0 }}
-                  >
-                    <CartesianGrid stroke="#65382B14" horizontal={false} />
-                    <XAxis type="number" domain={[0, total || 1]} hide />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      width={140}
-                      tick={{ fill: VANDYKE, fontSize: 12 }}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "#65382B0A" }}
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid #65382B22",
-                        background: "var(--card)",
-                      }}
-                      formatter={(v: number) => [`${v} participantes`, "Cantidad"]}
-                    />
-                    <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={36}>
-                      {sexDist.map((s) => (
-                        <Cell key={s.id} fill={s.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ClientOnly>
-            </div>
-            <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            <ul className="mt-6 space-y-4">
               {sexDist.map((s) => (
-                <li key={s.id} className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                    {s.name}
-                  </span>
-                  <span className="font-semibold text-[color:var(--vandyke)]">
-                    {s.pct}% ({s.value})
-                  </span>
+                <li key={s.id}>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate font-medium text-[color:var(--vandyke)]">
+                      {s.name}
+                    </span>
+                    <span className="shrink-0 font-serif text-lg font-semibold" style={{ color: s.color }}>
+                      {s.pct}% <span className="text-xs font-sans font-medium text-muted-foreground">({s.value})</span>
+                    </span>
+                  </div>
+                  <div className="mt-2 h-3 overflow-hidden rounded-full bg-[color:var(--cream-deep)]">
+                    <div
+                      className="h-full min-w-1 rounded-full transition-all duration-700"
+                      style={{
+                        width: `${Math.max(s.pct, s.value > 0 ? 4 : 0)}%`,
+                        backgroundColor: s.color,
+                      }}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
         </section>
 
-        {/* AceptaciÃ³n por dieta */}
+        {/* Aceptación por dieta */}
         {dietAcceptance.length > 0 && (
           <section className="mt-6">
-            <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
-              <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
                 <div>
                   <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-                    AceptaciÃ³n segÃºn tipo de dieta
+                    Aceptación según tipo de dieta
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Porcentaje de aprobaciÃ³n del producto segÃºn el perfil alimentario.
+                    Porcentaje de aprobación del producto según el perfil alimentario.
                   </p>
                 </div>
                 <Heart className="h-5 w-5 text-[color:var(--pumpkin)]" />
@@ -891,9 +882,9 @@ function AdminPage() {
 
         {/* Mejor / Peor */}
         {bestAttr && worstAttr && (
-          <section className="mt-6 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
-              <div className="flex items-center gap-3">
+          <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-2">
+            <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] sm:rounded-3xl sm:p-6">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--moss)]/15 text-[color:var(--moss)]">
                   <TrendingUp className="h-5 w-5" />
                 </div>
@@ -901,21 +892,21 @@ function AdminPage() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mejor valorado</p>
                   <h3 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">{bestAttr.metric}</h3>
                 </div>
-                <p className="ml-auto font-serif text-3xl font-semibold text-[color:var(--moss)]">
+                <p className="ml-auto font-serif text-2xl font-semibold text-[color:var(--moss)] sm:text-3xl">
                   {bestAttr.value.toFixed(1)}
                 </p>
               </div>
             </div>
-            <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
-              <div className="flex items-center gap-3">
+            <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] sm:rounded-3xl sm:p-6">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--pumpkin)]/15 text-[color:var(--pumpkin)]">
                   <TrendingDown className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menor valoraciÃ³n</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menor valoración</p>
                   <h3 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">{worstAttr.metric}</h3>
                 </div>
-                <p className="ml-auto font-serif text-3xl font-semibold text-[color:var(--pumpkin)]">
+                <p className="ml-auto font-serif text-2xl font-semibold text-[color:var(--pumpkin)] sm:text-3xl">
                   {worstAttr.value.toFixed(1)}
                 </p>
               </div>
@@ -924,9 +915,9 @@ function AdminPage() {
         )}
 
         {/* Comentarios agregados */}
-        <section className="mt-6 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
-            <div className="flex items-center gap-3">
+        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-2">
+          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--moss)]/15 text-[color:var(--moss)]">
                 <MessageSquareQuote className="h-5 w-5" />
               </div>
@@ -953,17 +944,17 @@ function AdminPage() {
                   key={c.id}
                   className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--vandyke)]/90 transition hover:border-[color:var(--moss)]/50"
                 >
-                  <p className="leading-relaxed">â€œ{c.descriptiveComments}â€</p>
+                  <p className="leading-relaxed">&quot;{c.descriptiveComments}&quot;</p>
                   <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} Â· {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
+                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} · {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
                   </p>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
-            <div className="flex items-center gap-3">
+          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--pumpkin)]/15 text-[color:var(--pumpkin)]">
                 <MessageCircle className="h-5 w-5" />
               </div>
@@ -990,9 +981,9 @@ function AdminPage() {
                   key={c.id}
                   className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--vandyke)]/90 transition hover:border-[color:var(--pumpkin)]/50"
                 >
-                  <p className="leading-relaxed">â€œ{c.affectiveComments}â€</p>
+                  <p className="leading-relaxed">&quot;{c.affectiveComments}&quot;</p>
                   <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} Â· {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
+                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} · {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
                   </p>
                 </li>
               ))}
@@ -1001,32 +992,32 @@ function AdminPage() {
         </section>
 
         <section className="mt-6">
-          <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)] sm:p-8">
+          <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-8">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-x-0 top-0 h-1"
               style={{ background: `linear-gradient(to right, ${MOSS}, ${ORANGE}, ${PUMPKIN})` }}
             />
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--vandyke)]/10 text-[color:var(--vandyke)]">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  ConclusiÃ³n general
+                  Conclusión general
                 </p>
                 <h2 className="font-serif text-2xl font-semibold text-[color:var(--vandyke)]">
                   Resumen interpretativo
                 </h2>
               </div>
-              <span className="ml-auto font-serif text-3xl font-semibold tabular-nums text-[color:var(--moss)]">
+              <span className="ml-auto font-serif text-2xl font-semibold tabular-nums text-[color:var(--moss)] sm:text-3xl">
                 {Math.round(animCount)}%
               </span>
             </div>
             {total > 0 ? (
               <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-[color:var(--vandyke)]/85">
                 Sobre <strong>{total}</strong> participantes, el producto presenta un{" "}
-                <strong>{acceptancePct}%</strong> de aceptaciÃ³n. El atributo mejor valorado es{" "}
+                <strong>{acceptancePct}%</strong> de aceptación. El atributo mejor valorado es{" "}
                 <span className="font-semibold text-[color:var(--moss)]">{bestAttr.metric}</span> ({bestAttr.value.toFixed(1)}/5),
                 mientras que <span className="font-semibold text-[color:var(--pumpkin)]">{worstAttr.metric}</span> ({worstAttr.value.toFixed(1)}/5)
                 representa el aspecto con mayor margen de mejora.
@@ -1039,8 +1030,8 @@ function AdminPage() {
           </div>
         </section>
 
-        <p className="mt-8 text-right text-xs text-muted-foreground">
-          NutriLen Â· Proyecto integrador ISI Ã— NutriciÃ³n
+        <p className="mt-8 text-center text-xs text-muted-foreground sm:text-right">
+          NutriLen · Proyecto integrador ISI x Nutrición
         </p>
       </main>
       <Footer />

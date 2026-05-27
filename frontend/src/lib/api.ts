@@ -15,7 +15,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
     ...init,
   });
-  if (!res.ok) throw new Error(`API ${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`API ${res.status} ${res.statusText}${body ? `: ${body}` : ""}`);
+  }
   return (await res.json()) as T;
 }
 
@@ -60,9 +63,11 @@ export async function obtenerEstadisticas(params?: {
       return await request<SurveyResponse[]>(`/estadisticas${qs ? `?${qs}` : ""}`, {
         headers: params?.token ? { Authorization: `Bearer ${params.token}` } : undefined,
       });
-    } catch {
+    } catch (error) {
       if (ALLOW_LOCAL_FALLBACK) return loadSurveys();
-      throw new Error("No se pudieron obtener estadisticas del backend.");
+      throw error instanceof Error
+        ? error
+        : new Error("No se pudieron obtener estadisticas del backend.");
     }
   }
   if (ALLOW_LOCAL_FALLBACK) return loadSurveys();

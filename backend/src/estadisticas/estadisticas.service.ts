@@ -50,7 +50,7 @@ export class EstadisticasService {
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-    const sql = `
+    const sqlCurrent = `
       SELECT
         id, fecha, sexo, dieta, color, aroma, firmeza, untuosidad, sabor_tostado, persistencia,
         aceptacion, liked, consume_again, recommend, descriptive_comments, affective_comments
@@ -58,8 +58,29 @@ export class EstadisticasService {
       ${where}
       ORDER BY fecha DESC
     `;
+    const sqlLegacy = `
+      SELECT
+        id, fecha, sexo, dieta, color, aroma, firmeza, untuosidad, sabor_tostado, persistencia,
+        aceptacion, liked, consume_again, recommend,
+        comentarios_descriptivos AS descriptive_comments,
+        comentarios_afectivos AS affective_comments
+      FROM public.encuestas
+      ${where}
+      ORDER BY fecha DESC
+    `;
 
-    const result = await this.db.query<SurveyRow>(sql, values);
+    let result;
+    try {
+      result = await this.db.query<SurveyRow>(sqlCurrent, values);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("descriptive_comments") || message.includes("affective_comments")) {
+        result = await this.db.query<SurveyRow>(sqlLegacy, values);
+      } else {
+        throw error;
+      }
+    }
+
     return result.rows.map((row: SurveyRow) => ({
       id: row.id,
       date: row.fecha,

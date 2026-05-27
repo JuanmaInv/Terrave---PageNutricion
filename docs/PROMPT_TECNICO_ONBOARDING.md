@@ -53,7 +53,6 @@ Si hay errores, se corrigen primero y recien despues se hace push.
 Promocion de cambios:
 - `qa -> beta`
 - `beta -> main`
-
 Nunca desarrollar directo en `main`.
 
 ## 7) CI en GitHub Actions

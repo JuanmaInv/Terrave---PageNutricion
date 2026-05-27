@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SignedIn, useClerk } from "@clerk/nextjs";
 import { Leaf, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 const publicLinks = [
   { href: "/", label: "Inicio" },
@@ -38,6 +38,11 @@ export function Navbar() {
   const isAdmin = pathname.startsWith("/administrador");
   const links = isAdmin ? adminLinks : publicLinks;
   const { dark, toggle } = useDarkMode();
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[color:var(--vandyke)] text-[color:var(--cream)] shadow-[var(--shadow-soft)]">
@@ -92,7 +97,7 @@ export function Navbar() {
             aria-label="Cambiar tema"
             className="ml-1 grid h-9 w-9 place-items-center rounded-full opacity-80 transition hover:bg-white/10 hover:opacity-100"
           >
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {!mounted ? <Moon className="h-4 w-4" /> : dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
         </nav>
       </div>

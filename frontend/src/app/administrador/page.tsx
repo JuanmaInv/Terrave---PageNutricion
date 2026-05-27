@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Navbar, Footer } from "@/components/nutrilen/Navbar";
 import { PageLoader, useNavLoader } from "@/components/nutrilen/PageLoader";
 import { toast } from "sonner";
-import { SignedIn, SignedOut, SignIn, useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignIn, useAuth, useUser } from "@clerk/nextjs";
 import {
   Users,
   ClipboardCheck,
@@ -47,15 +47,14 @@ import {
   ATTRIBUTES,
   DIET_OPTIONS,
   SEX_OPTIONS,
-  ensureSeed,
-  loadSurveys,
   type AttrKey,
   type Diet,
   type Sex,
   type SurveyResponse,
 } from "@/lib/nutrilen";
 import {
-    descargarBlob,
+  descargarBlob,
+  obtenerEstadisticas,
   exportarPDF,
   exportarExcel,
 } from "@/lib/api";
@@ -75,8 +74,8 @@ function AdminGate() {
         <div className="flex min-h-screen items-center justify-center bg-[color:var(--background)] px-4">
           <div className="w-full max-w-md">
             <div className="mb-6 text-center">
-              <h1 className="font-serif text-2xl font-semibold text-foreground">NutriLen · Panel admin</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Iniciá sesión para acceder a las estadísticas.</p>
+              <h1 className="font-serif text-2xl font-semibold text-foreground">NutriLen Â· Panel admin</h1>
+              <p className="mt-1 text-sm text-muted-foreground">IniciÃ¡ sesiÃ³n para acceder a las estadÃ­sticas.</p>
             </div>
             <SignIn
               routing="hash"
@@ -112,10 +111,10 @@ function AdminAuthorized() {
         <Navbar />
         <main className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-6 py-20">
           <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
-            <h2 className="font-serif text-2xl font-semibold text-foreground">Esta sección es solo para el equipo NutriLen</h2>
+            <h2 className="font-serif text-2xl font-semibold text-foreground">Esta secciÃ³n es solo para el equipo NutriLen</h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              Tu cuenta no tiene permisos para visualizar el panel de estadísticas.
-              Si sos parte del equipo y necesitás acceso, contactá al administrador del proyecto.
+              Tu cuenta no tiene permisos para visualizar el panel de estadÃ­sticas.
+              Si sos parte del equipo y necesitÃ¡s acceso, contactÃ¡ al administrador del proyecto.
             </p>
           </div>
         </main>
@@ -175,13 +174,8 @@ function AnimatedBar({ value, color, delay = 0 }: { value: number; color: string
 }
 
 function AdminPage() {
-  const [data, setData] = useState<SurveyResponse[]>(() => {
-    ensureSeed();
-    return loadSurveys();
-  });
-  useEffect(() => {
-    ensureSeed();
-  }, []);
+  const { getToken } = useAuth();
+  const [data, setData] = useState<SurveyResponse[]>([]);
   const { show: showLoader, run: runWithLoader, setShow: setLoader } = useNavLoader(1200);
 
   const [fDiet, setFDiet] = useState<Diet | "all">("all");
@@ -255,7 +249,7 @@ function AdminPage() {
     };
   });
 
-  // Frecuencia de respuestas por hora del día (0–23)
+  // Frecuencia de respuestas por hora del dÃ­a (0â€“23)
   const hourlyDist = useMemo(() => {
     const buckets = Array.from({ length: 24 }, (_, h) => ({
       hour: h,
@@ -300,10 +294,26 @@ function AdminPage() {
 
   const animCount = useCountUp(acceptancePct);
 
+  async function fetchStats() {
+    const token = await getToken();
+    const rows = await obtenerEstadisticas({
+      token: token ?? undefined,
+      diet: fDiet,
+      sex: fSex,
+      from: fFrom || undefined,
+      to: fTo || undefined,
+    });
+    setData(rows);
+  }
+
   function refresh() {
-    runWithLoader(() => {
-      setData(loadSurveys());
-      toast.success("Estadísticas actualizadas");
+    runWithLoader(async () => {
+      try {
+        await fetchStats();
+        toast.success("Estadisticas actualizadas");
+      } catch {
+        toast.error("No se pudieron actualizar las estadisticas.");
+      }
     });
   }
 
@@ -315,6 +325,17 @@ function AdminPage() {
   }
 
   const hasFilters = fDiet !== "all" || fSex !== "all" || fFrom || fTo;
+
+  useEffect(() => {
+    runWithLoader(async () => {
+      try {
+        await fetchStats();
+      } catch {
+        toast.error("No se pudieron cargar estadisticas del backend.");
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fDiet, fSex, fFrom, fTo]);
 
   const lastUpdate = new Date().toLocaleString("es-AR", {
     day: "2-digit",
@@ -336,10 +357,10 @@ function AdminPage() {
               Panel administrativo
             </span>
             <h1 className="mt-4 font-serif text-4xl font-semibold tracking-tight text-[color:var(--vandyke)] sm:text-5xl">
-              Resultados de la evaluación
+              Resultados de la evaluaciÃ³n
             </h1>
             <p className="mt-3 max-w-2xl text-base text-muted-foreground">
-              Dashboard académico de análisis sensorial del medallón de lenteja.
+              Dashboard acadÃ©mico de anÃ¡lisis sensorial del medallÃ³n de lenteja.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -449,7 +470,7 @@ function AdminPage() {
             )}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Mostrando <strong className="text-[color:var(--vandyke)]">{total}</strong> participantes · Última actualización: {lastUpdate}
+            Mostrando <strong className="text-[color:var(--vandyke)]">{total}</strong> participantes Â· Ãšltima actualizaciÃ³n: {lastUpdate}
           </p>
         </section>
 
@@ -459,7 +480,7 @@ function AdminPage() {
             { icon: Users, label: "Participantes", value: total, color: MOSS },
             { icon: ClipboardCheck, label: "Encuestas completas", value: total, color: ORANGE },
             { icon: Star, label: "Puntaje global", value: globalScore.toFixed(1), color: VANDYKE },
-            { icon: ThumbsUp, label: "Aceptación", value: `${acceptancePct}%`, color: PUMPKIN },
+            { icon: ThumbsUp, label: "AceptaciÃ³n", value: `${acceptancePct}%`, color: PUMPKIN },
           ].map((s) => (
             <div
               key={s.label}
@@ -490,7 +511,7 @@ function AdminPage() {
                 Perfil sensorial
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Evaluación promedio por atributo (escala 1–5). Tocá los chips para activar o desactivar atributos.
+                EvaluaciÃ³n promedio por atributo (escala 1â€“5). TocÃ¡ los chips para activar o desactivar atributos.
               </p>
             </div>
             <div className="mt-4 flex flex-wrap gap-1.5">
@@ -638,8 +659,8 @@ function AdminPage() {
                   Frecuencia de consumo por hora
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Cantidad de encuestas completadas según la hora del día (0–23 h). Permite identificar
-                  en qué franja horaria se prefiere consumir el medallón de lenteja.
+                  Cantidad de encuestas completadas segÃºn la hora del dÃ­a (0â€“23 h). Permite identificar
+                  en quÃ© franja horaria se prefiere consumir el medallÃ³n de lenteja.
                 </p>
               </div>
               <div className="hidden items-center gap-2 rounded-full bg-[color:var(--orange-yellow)]/20 px-3 py-1 text-xs font-semibold text-[color:var(--vandyke)] sm:inline-flex">
@@ -706,7 +727,7 @@ function AdminPage() {
               </ClientOnly>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              Eje X: hora del día · Eje Y: número de encuestas registradas en esa franja.
+              Eje X: hora del dÃ­a Â· Eje Y: nÃºmero de encuestas registradas en esa franja.
             </p>
           </div>
         </section>
@@ -715,10 +736,10 @@ function AdminPage() {
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
             <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              Distribución de dietas
+              DistribuciÃ³n de dietas
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Composición de la muestra evaluada ({total} participantes).
+              ComposiciÃ³n de la muestra evaluada ({total} participantes).
             </p>
             <div className="mt-4 h-64">
               <ClientOnly fallback={<div className="h-full" />}>
@@ -773,10 +794,10 @@ function AdminPage() {
 
           <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
             <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              Distribución por sexo biológico
+              DistribuciÃ³n por sexo biolÃ³gico
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Composición demográfica de la muestra.
+              ComposiciÃ³n demogrÃ¡fica de la muestra.
             </p>
             <div className="mt-6 h-56">
               <ClientOnly fallback={<div className="h-full" />}>
@@ -830,17 +851,17 @@ function AdminPage() {
           </div>
         </section>
 
-        {/* Aceptación por dieta */}
+        {/* AceptaciÃ³n por dieta */}
         {dietAcceptance.length > 0 && (
           <section className="mt-6">
             <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-                    Aceptación según tipo de dieta
+                    AceptaciÃ³n segÃºn tipo de dieta
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Porcentaje de aprobación del producto según el perfil alimentario.
+                    Porcentaje de aprobaciÃ³n del producto segÃºn el perfil alimentario.
                   </p>
                 </div>
                 <Heart className="h-5 w-5 text-[color:var(--pumpkin)]" />
@@ -891,7 +912,7 @@ function AdminPage() {
                   <TrendingDown className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menor valoración</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menor valoraciÃ³n</p>
                   <h3 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">{worstAttr.metric}</h3>
                 </div>
                 <p className="ml-auto font-serif text-3xl font-semibold text-[color:var(--pumpkin)]">
@@ -932,9 +953,9 @@ function AdminPage() {
                   key={c.id}
                   className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--vandyke)]/90 transition hover:border-[color:var(--moss)]/50"
                 >
-                  <p className="leading-relaxed">“{c.descriptiveComments}”</p>
+                  <p className="leading-relaxed">â€œ{c.descriptiveComments}â€</p>
                   <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} · {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
+                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} Â· {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
                   </p>
                 </li>
               ))}
@@ -969,9 +990,9 @@ function AdminPage() {
                   key={c.id}
                   className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--vandyke)]/90 transition hover:border-[color:var(--pumpkin)]/50"
                 >
-                  <p className="leading-relaxed">“{c.affectiveComments}”</p>
+                  <p className="leading-relaxed">â€œ{c.affectiveComments}â€</p>
                   <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} · {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
+                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} Â· {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
                   </p>
                 </li>
               ))}
@@ -992,7 +1013,7 @@ function AdminPage() {
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Conclusión general
+                  ConclusiÃ³n general
                 </p>
                 <h2 className="font-serif text-2xl font-semibold text-[color:var(--vandyke)]">
                   Resumen interpretativo
@@ -1005,7 +1026,7 @@ function AdminPage() {
             {total > 0 ? (
               <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-[color:var(--vandyke)]/85">
                 Sobre <strong>{total}</strong> participantes, el producto presenta un{" "}
-                <strong>{acceptancePct}%</strong> de aceptación. El atributo mejor valorado es{" "}
+                <strong>{acceptancePct}%</strong> de aceptaciÃ³n. El atributo mejor valorado es{" "}
                 <span className="font-semibold text-[color:var(--moss)]">{bestAttr.metric}</span> ({bestAttr.value.toFixed(1)}/5),
                 mientras que <span className="font-semibold text-[color:var(--pumpkin)]">{worstAttr.metric}</span> ({worstAttr.value.toFixed(1)}/5)
                 representa el aspecto con mayor margen de mejora.
@@ -1019,13 +1040,14 @@ function AdminPage() {
         </section>
 
         <p className="mt-8 text-right text-xs text-muted-foreground">
-          NutriLen · Proyecto integrador ISI × Nutrición
+          NutriLen Â· Proyecto integrador ISI Ã— NutriciÃ³n
         </p>
       </main>
       <Footer />
     </div>
   );
 }
+
 
 
 

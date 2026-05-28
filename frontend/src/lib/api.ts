@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { loadSurveys, saveSurvey, type SurveyResponse } from "./nutrilen";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+const ALLOW_LOCAL_FALLBACK = process.env.NEXT_PUBLIC_DEV_LOCAL_FALLBACK === "true";
 
 function hasBackend(): boolean {
   return Boolean(API_URL && API_URL.trim().length > 0);
@@ -14,7 +15,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
     ...init,
   });
-  if (!res.ok) throw new Error(`API ${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`API ${res.status} ${res.statusText}${body ? `: ${body}` : ""}`);
+  }
   return (await res.json()) as T;
 }
 
@@ -27,23 +31,47 @@ export async function enviarEncuesta(survey: SurveyResponse): Promise<void> {
       });
       return;
     } catch {
-      // Fallback para entorno de desarrollo si backend no esta disponible
-      saveSurvey(survey);
-      return;
+      if (ALLOW_LOCAL_FALLBACK) {
+        saveSurvey(survey);
+        return;
+      }
+      throw new Error("No se pudo registrar la encuesta en el backend.");
     }
   }
-  saveSurvey(survey);
+  if (ALLOW_LOCAL_FALLBACK) {
+    saveSurvey(survey);
+    return;
+  }
+  throw new Error("Backend no configurado.");
 }
 
-export async function obtenerEstadisticas(): Promise<SurveyResponse[]> {
+export async function obtenerEstadisticas(params?: {
+  token?: string;
+  diet?: string;
+  sex?: string;
+  from?: string;
+  to?: string;
+}): Promise<SurveyResponse[]> {
   if (hasBackend()) {
     try {
-      return await request<SurveyResponse[]>("/estadisticas");
-    } catch {
-      return loadSurveys();
+      const query = new URLSearchParams();
+      if (params?.diet && params.diet !== "all") query.set("diet", params.diet);
+      if (params?.sex && params.sex !== "all") query.set("sex", params.sex);
+      if (params?.from) query.set("from", params.from);
+      if (params?.to) query.set("to", params.to);
+      const qs = query.toString();
+      return await request<SurveyResponse[]>(`/estadisticas${qs ? `?${qs}` : ""}`, {
+        headers: params?.token ? { Authorization: `Bearer ${params.token}` } : undefined,
+      });
+    } catch (error) {
+      if (ALLOW_LOCAL_FALLBACK) return loadSurveys();
+      throw error instanceof Error
+        ? error
+        : new Error("No se pudieron obtener estadisticas del backend.");
     }
   }
-  return loadSurveys();
+  if (ALLOW_LOCAL_FALLBACK) return loadSurveys();
+  throw new Error("Backend no configurado.");
 }
 
 export async function validarAdmin(

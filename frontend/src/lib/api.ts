@@ -30,12 +30,14 @@ export async function enviarEncuesta(survey: SurveyResponse): Promise<void> {
         body: JSON.stringify(survey),
       });
       return;
-    } catch {
+    } catch (error) {
       if (ALLOW_LOCAL_FALLBACK) {
         saveSurvey(survey);
         return;
       }
-      throw new Error("No se pudo registrar la encuesta en el backend.");
+      throw error instanceof Error
+        ? error
+        : new Error("No se pudo registrar la encuesta en el backend.");
     }
   }
   if (ALLOW_LOCAL_FALLBACK) {

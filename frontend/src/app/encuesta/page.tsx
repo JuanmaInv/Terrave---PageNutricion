@@ -310,8 +310,10 @@ export default function EncuestaPage() {
         toast.success("Evaluación enviada correctamente");
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
-      } catch {
-        toast.error("No se pudo enviar la encuesta. Intentá nuevamente.");
+      } catch (error) {
+        const detail =
+          error instanceof Error ? error.message : "Error desconocido al enviar la encuesta.";
+        toast.error(`No se pudo enviar la encuesta. ${detail}`);
       }
     });
   }

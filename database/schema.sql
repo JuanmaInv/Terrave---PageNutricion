@@ -7,32 +7,23 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    rol VARCHAR(50) NOT NULL DEFAULT 'user',
+    rol VARCHAR(50) NOT NULL DEFAULT 'cliente' CHECK (rol IN ('admin', 'cliente')),
     activo BOOLEAN NOT NULL DEFAULT true,
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+    fecha_registro TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- Semilla para Administrador Principal (juanma.capito@gmail.com)
-INSERT INTO public.usuarios (email, rol, activo, nombre)
-SELECT v.email, v.rol, v.activo, v.nombre
-FROM (VALUES
-    ('juanma.capito@gmail.com', 'admin', true, 'Juanma')
-) AS v(email, rol, activo, nombre)
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.usuarios u WHERE lower(u.email) = lower(v.email)
-);
-
--- Asegurar que el rol sea 'admin' y esté activo
-UPDATE public.usuarios
-SET rol = 'admin', activo = true
-WHERE lower(email) IN (
-    'juanma.capito@gmail.com'
-);
+-- Nota de seguridad:
+-- No se insertan administradores hardcodeados en el esquema base.
+-- El alta de usuarios con rol 'admin' debe hacerse por migración de entorno
+-- o flujo administrativo autenticado.
 
 
 -- 2. Tabla de Encuestas Sensoriales (Resultados de las Evaluaciones)
+-- Nota: usuario_id es nullable — las encuestas son anónimas por diseño.
+--       La columna existe para uso futuro si se requiere trazabilidad opcional.
 CREATE TABLE IF NOT EXISTS public.encuestas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID REFERENCES public.usuarios(id) ON DELETE SET NULL,
     fecha TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     sexo VARCHAR(50) NOT NULL,
     dieta VARCHAR(50) NOT NULL,
@@ -51,12 +42,14 @@ CREATE TABLE IF NOT EXISTS public.encuestas (
     consume_again VARCHAR(10) NOT NULL,            -- 'si' | 'no' | 'tal_vez'
     recommend INTEGER NOT NULL CHECK (recommend >= 1 AND recommend <= 5),
     
-    -- Comentarios abiertos (Soporta nombres de columnas modernos y legacy en NestJS)
-    descriptive_comments TEXT,                     -- (o comentarios_descriptivos)
-    affective_comments TEXT                        -- (o comentarios_afectivos)
+    -- Comentarios abiertos
+    descriptive_comments TEXT,
+    affective_comments TEXT
 );
 
 -- Índices recomendados para optimización de reportes del Administrador
 CREATE INDEX IF NOT EXISTS idx_encuestas_fecha ON public.encuestas(fecha);
 CREATE INDEX IF NOT EXISTS idx_encuestas_sexo ON public.encuestas(sexo);
 CREATE INDEX IF NOT EXISTS idx_encuestas_dieta ON public.encuestas(dieta);
+CREATE INDEX IF NOT EXISTS idx_encuestas_usuario ON public.encuestas(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_usuarios_email_lower ON public.usuarios((lower(email)));

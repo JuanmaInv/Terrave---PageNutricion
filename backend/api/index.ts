@@ -2,10 +2,9 @@ import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "../src/app.module";
-import * as express from "express";
-import type { Request, Response } from "express";
+import express, { type Express, type Request, type Response } from "express";
 
-const server: express.Express = express();
+const server: Express = express();
 
 // Cached initialization promise para Vercel serverless
 let initPromise: Promise<void> | null = null;
@@ -33,8 +32,11 @@ async function bootstrap(): Promise<void> {
   await app.init();
 }
 
-export default async function handler(req: Request, res: Response) {
-  // Inicializa una sola vez y reutiliza la instancia
+export default async function handler(
+  req: Request,
+  res: Response
+) {
+  // Inicializa una sola vez y reutiliza la instancia en requests siguientes
   if (!initPromise) {
     initPromise = bootstrap().catch((err) => {
       initPromise = null; // resetea si falla para poder reintentar

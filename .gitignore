@@ -6,6 +6,7 @@ Nutrilen-Lovable/env
 
 # Dependencies
 node_modules
+.pnpm-store/
 
 # Build
 dist

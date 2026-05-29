@@ -1,23 +1,20 @@
-import { Controller, Get, Headers, Query } from "@nestjs/common";
-import { AdminService } from "../admin/admin.service";
+import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { AdminGuard } from "../admin/guards/admin.guard";
 import { GetEstadisticasQueryDto } from "./dto/get-estadisticas-query.dto";
 import { EstadisticasService } from "./estadisticas.service";
 
+/**
+ * Estadisticas controller — protected by AdminGuard.
+ * Pattern: Decorator (@UseGuards) — the guard is applied declaratively,
+ * keeping the controller free of authentication logic (SRP).
+ */
 @Controller("estadisticas")
 export class EstadisticasController {
-  constructor(
-    private readonly adminService: AdminService,
-    private readonly estadisticasService: EstadisticasService
-  ) {}
+  constructor(private readonly estadisticasService: EstadisticasService) {}
 
+  @UseGuards(AdminGuard)
   @Get()
-  async getStats(
-    @Query() query: GetEstadisticasQueryDto,
-    @Headers("authorization") authorization?: string
-  ) {
-    const token = this.adminService.getTokenFromAuthorization(authorization);
-    await this.adminService.validateAdminToken(token);
-
+  async getStats(@Query() query: GetEstadisticasQueryDto) {
     return this.estadisticasService.getSurveys(query);
   }
 }

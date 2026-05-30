@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
@@ -17,7 +17,7 @@ export interface UseSurveyStatsResult {
  * Fetches and manages survey statistics data.
  * Automatically re-fetches when filters change.
  *
- * Pattern: Observer (filters as observable state — this hook reacts to changes)
+ * Pattern: Observer (filters as observable state â€” this hook reacts to changes)
  * SOLID:
  *   - SRP: data fetching logic is isolated from UI rendering logic.
  *   - DIP: depends on obtenerEstadisticas abstraction, not on fetch directly.
@@ -57,8 +57,10 @@ export function useSurveyStats(filters: SurveyFilters): UseSurveyStatsResult {
   }, [fetchStats]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStats();
   }, [fetchStats]);
 
   return { data, isLoading, refresh };
 }
+

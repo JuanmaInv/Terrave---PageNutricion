@@ -153,19 +153,26 @@ export async function exportarExcel(
   token?: string
 ): Promise<Blob> {
   if (hasBackend()) {
-    const query = new URLSearchParams();
-    if (context?.filters?.diet && context.filters.diet !== "all") {
-      query.set("diet", context.filters.diet);
+    try {
+      const query = new URLSearchParams();
+      if (context?.filters?.diet && context.filters.diet !== "all") {
+        query.set("diet", context.filters.diet);
+      }
+      if (context?.filters?.sex && context.filters.sex !== "all") {
+        query.set("sex", context.filters.sex);
+      }
+      if (context?.filters?.from) query.set("from", context.filters.from);
+      if (context?.filters?.to) query.set("to", context.filters.to);
+      const qs = query.toString();
+      return await requestBlob(`/estadisticas/excel${qs ? `?${qs}` : ""}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+    } catch (error) {
+      // Resilience fallback: if backend export fails, still generate local report.
+      const { blob } = await ReportFactory.exportAs("excel", surveys, context);
+      console.error("Backend Excel export failed. Using local exporter fallback.", error);
+      return blob;
     }
-    if (context?.filters?.sex && context.filters.sex !== "all") {
-      query.set("sex", context.filters.sex);
-    }
-    if (context?.filters?.from) query.set("from", context.filters.from);
-    if (context?.filters?.to) query.set("to", context.filters.to);
-    const qs = query.toString();
-    return await requestBlob(`/estadisticas/excel${qs ? `?${qs}` : ""}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
   }
   const { blob } = await ReportFactory.exportAs("excel", surveys, context);
   return blob;

@@ -2,11 +2,20 @@
   "version": 2,
   "builds": [
     {
+      "src": "api/excel_report.py",
+      "use": "@vercel/python"
+    },
+    {
       "src": "api/index.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
+    {
+      "src": "/python/excel-report",
+      "dest": "api/excel_report.py",
+      "methods": ["POST", "OPTIONS"]
+    },
     {
       "src": "/(.*)",
       "dest": "api/index.ts",

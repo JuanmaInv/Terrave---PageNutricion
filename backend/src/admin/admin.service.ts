@@ -10,13 +10,6 @@ type UsuarioAdminRow = {
 export class AdminService {
   constructor(private readonly db: DatabaseService) {}
 
-  private getAdminEmails(): string[] {
-    return (process.env.ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((value) => value.trim().toLowerCase())
-      .filter((value: string) => value.length > 0);
-  }
-
   getTokenFromAuthorization(authorization?: string): string {
     if (!authorization?.startsWith("Bearer ")) {
       throw new UnauthorizedException("Missing bearer token");
@@ -43,7 +36,7 @@ export class AdminService {
       throw new UnauthorizedException("Clerk user has no primary email");
     }
 
-    const isAdmin = this.getAdminEmails().includes(email) || (await this.isAdminInDatabase(email));
+    const isAdmin = await this.isAdminInDatabase(email);
     if (!isAdmin) {
       throw new UnauthorizedException("Admin access required");
     }
@@ -65,13 +58,5 @@ export class AdminService {
     );
 
     return (result.rowCount ?? 0) > 0;
-  }
-
-  validateAdminByEmail(email: string | null): { isAdmin: boolean; email?: string } {
-    const adminEmails = this.getAdminEmails();
-    if (!email) throw new UnauthorizedException("Missing or invalid token");
-    const isAdmin = adminEmails.includes(email.toLowerCase());
-    if (!isAdmin) throw new UnauthorizedException("Admin access required");
-    return { isAdmin, email };
   }
 }

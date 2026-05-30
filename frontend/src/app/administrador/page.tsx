@@ -1,61 +1,22 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navbar, Footer } from "@/components/nutrilen/Navbar";
 import { PageLoader, useNavLoader } from "@/components/nutrilen/PageLoader";
 import { toast } from "sonner";
-import { SignedIn, SignedOut, SignIn, useAuth, useUser } from "@clerk/nextjs";
-import {
-  Users,
-  ClipboardCheck,
-  Star,
-  ThumbsUp,
-  Sparkles,
-  TrendingUp,
-  TrendingDown,
-  RefreshCw,
-  FileSpreadsheet,
-  FileText,
-  Filter,
-  Heart,
-  MessageSquareQuote,
-  MessageCircle,
-  Clock,
-} from "lucide-react";
-import {
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Line,
-  Area,
-  ComposedChart,
-} from "recharts";
-import {
-  ATTRIBUTES,
-  DIET_OPTIONS,
-  SEX_OPTIONS,
-  type AttrKey,
-  type Diet,
-  type Sex,
-  type SurveyResponse,
-} from "@/lib/nutrilen";
-import {
-  descargarBlob,
-  obtenerEstadisticas,
-  exportarPDF,
-  exportarExcel,
-} from "@/lib/api";
+import { SignedIn, SignedOut, SignIn, useAuth } from "@clerk/nextjs";
+import { descargarBlob, exportarPDF, exportarExcel, validarAdmin } from "@/lib/api";
+import { useSurveyFilters } from "@/hooks/useSurveyFilters";
+import { useSurveyStats } from "@/hooks/useSurveyStats";
+import { useAdminDashboardViewModel } from "@/hooks/useAdminDashboardViewModel";
+import { useCountUp } from "@/hooks/useCountUp";
+import { StatsFilters } from "@/components/admin/StatsFilters";
+import { KpiGrid } from "@/components/admin/KpiGrid";
+import { SensorialSection } from "@/components/admin/SensorialSection";
+import { HourlyChart } from "@/components/admin/HourlyChart";
+import { DistributionCharts } from "@/components/admin/DistributionCharts";
+import { CommentsPanel } from "@/components/admin/CommentsPanel";
+import { AdminHeader } from "@/components/admin/AdminHeader";
 
 export default function AdminRoute() {
   return (
@@ -93,17 +54,42 @@ function AdminGate() {
 }
 
 function AdminAuthorized() {
-  const { user, isLoaded } = useUser();
-  if (!isLoaded) return null;
-  const role = (user?.publicMetadata as { role?: string } | undefined)?.role;
-  const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
-  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean);
-  const hasEmailAccess = Boolean(email && adminEmails.includes(email));
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const [isAuthorizing, setIsAuthorizing] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
 
-  if (role !== "admin" && !hasEmailAccess) {
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkAccess() {
+      if (!isLoaded || !isSignedIn) return;
+      try {
+        const token = await getToken();
+        const result = await validarAdmin(token ?? undefined);
+        if (isMounted) setHasAccess(result.isAdmin);
+      } catch {
+        if (isMounted) setHasAccess(false);
+      } finally {
+        if (isMounted) setIsAuthorizing(false);
+      }
+    }
+
+    checkAccess();
+    return () => {
+      isMounted = false;
+    };
+  }, [getToken, isLoaded, isSignedIn]);
+
+  if (isAuthorizing) {
+    return (
+      <div className="min-h-screen w-full bg-background text-foreground font-sans">
+        <Navbar />
+        <PageLoader show />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
     return (
       <div className="flex min-h-screen flex-col">
         <Navbar />
@@ -120,22 +106,9 @@ function AdminAuthorized() {
       </div>
     );
   }
+
   return <AdminPage />;
 }
-
-const VANDYKE = "#65382B";
-const MOSS = "#898C32";
-const PUMPKIN = "#FF6D0E";
-const ORANGE = "#F4B223";
-
-const ATTRIBUTE_SHORT_LABELS: Record<AttrKey, string> = {
-  color: "Color",
-  aroma: "Aroma",
-  firmeza: "Firmeza",
-  untuosidad: "Untuosidad",
-  sabor_tostado: "Sabor",
-  persistencia: "Persistencia",
-};
 
 function ClientOnly({
   children,
@@ -147,214 +120,36 @@ function ClientOnly({
   return <>{children ?? fallback}</>;
 }
 
-function useCountUp(target: number, duration = 900) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    let raf: number;
-    const start = performance.now();
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setVal(target * eased);
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return val;
-}
-
-function AnimatedBar({ value, color, delay = 0 }: { value: number; color: string; delay?: number }) {
-  const [w, setW] = useState(0);
-  useEffect(() => {
-    const t = setTimeout(() => setW(value), 60 + delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return (
-    <div className="h-3 w-full overflow-hidden rounded-full bg-[color:var(--cream-deep)]">
-      <div
-        className="h-full rounded-full transition-[width] duration-1000 ease-out"
-        style={{ width: `${w}%`, backgroundColor: color }}
-      />
-    </div>
-  );
-}
-
 function AdminPage() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [data, setData] = useState<SurveyResponse[]>([]);
+  const { getToken } = useAuth();
   const { show: showLoader, run: runWithLoader, setShow: setLoader } = useNavLoader(1200);
+  const { filters, updateFilter, clearFilters, hasActiveFilters } = useSurveyFilters();
+  const { data, refresh: refreshStats } = useSurveyStats(filters);
 
-  const [fDiet, setFDiet] = useState<Diet | "all">("all");
-  const [fSex, setFSex] = useState<Sex | "all">("all");
-  const [fFrom, setFFrom] = useState<string>("");
-  const [fTo, setFTo] = useState<string>("");
+  const {
+    total,
+    sensorial,
+    globalScore,
+    acceptancePct,
+    dietDist,
+    sexDist,
+    hourlyDist,
+    peakHour,
+    hasHourly,
+    dietAcceptance,
+    bestAttr,
+    worstAttr,
+    descriptiveCommentsList,
+    affectiveCommentsList,
+  } = useAdminDashboardViewModel(data);
 
-  const [activeAttrs, setActiveAttrs] = useState<AttrKey[]>(ATTRIBUTES.map((a) => a.key));
+  const animCount = useCountUp(acceptancePct);
 
-  // Initial mount loader (navigation feel)
   useEffect(() => {
     setLoader(true);
     const t = window.setTimeout(() => setLoader(false), 1200);
     return () => window.clearTimeout(t);
   }, [setLoader]);
-
-  const filtered = useMemo(() => {
-    return data.filter((d) => {
-      if (fDiet !== "all" && d.diet !== fDiet) return false;
-      if (fSex !== "all" && d.sex !== fSex) return false;
-      const t = new Date(d.date).getTime();
-      if (fFrom && t < new Date(fFrom).getTime()) return false;
-      if (fTo && t > new Date(fTo).getTime() + 86400000) return false;
-      return true;
-    });
-  }, [data, fDiet, fSex, fFrom, fTo]);
-
-  const total = filtered.length;
-
-  function avg(attr: AttrKey) {
-    if (!filtered.length) return 0;
-    const v = filtered.reduce((s, d) => s + (d.attrs[attr] ?? 0), 0) / filtered.length;
-    return Math.round(v * 10) / 10;
-  }
-
-  const sensorial = ATTRIBUTES.map((a) => ({
-    key: a.key,
-    metric: a.label,
-    metricShort: ATTRIBUTE_SHORT_LABELS[a.key],
-    value: avg(a.key),
-  }));
-  // Radar: only include selected attributes (so deselected ones disappear entirely)
-  const radarData = sensorial.filter((d) => activeAttrs.includes(d.key));
-  const barsData = radarData;
-
-  const globalScore =
-    sensorial.length === 0
-      ? 0
-      : Math.round(
-          (sensorial.reduce((s, d) => s + d.value, 0) / sensorial.length) * 10,
-        ) / 10;
-
-  const likedYes = filtered.filter((d) => d.liked === "si").length;
-  const acceptancePct =
-    total === 0 ? 0 : Math.round((likedYes / total) * 100);
-
-  const dietDist = DIET_OPTIONS.map((d) => {
-    const count = filtered.filter((x) => x.diet === d.id).length;
-    return {
-      id: d.id,
-      name: d.label,
-      value: count,
-      pct: total ? Math.round((count / total) * 100) : 0,
-      color: d.color,
-    };
-  });
-
-  const sexDist = SEX_OPTIONS.map((s) => {
-    const count = filtered.filter((x) => x.sex === s.id).length;
-    return {
-      id: s.id,
-      name: s.label,
-      value: count,
-      pct: total ? Math.round((count / total) * 100) : 0,
-      color: s.color,
-    };
-  });
-
-  // Frecuencia de respuestas por hora del día (0-23)
-  const hourlyDist = useMemo(() => {
-    const buckets = Array.from({ length: 24 }, (_, h) => ({
-      hour: h,
-      label: `${String(h).padStart(2, "0")}h`,
-      count: 0,
-    }));
-    filtered.forEach((r) => {
-      const h = new Date(r.date).getHours();
-      if (!Number.isNaN(h)) buckets[h].count += 1;
-    });
-    return buckets;
-  }, [filtered]);
-  const peakHour = hourlyDist.reduce(
-    (best, cur) => (cur.count > best.count ? cur : best),
-    hourlyDist[0],
-  );
-  const hasHourly = hourlyDist.some((h) => h.count > 0);
-
-  const dietAcceptance = DIET_OPTIONS.map((d) => {
-    const group = filtered.filter((x) => x.diet === d.id);
-    const yes = group.filter((x) => x.liked === "si").length;
-    return {
-      name: d.label,
-      value: group.length ? Math.round((yes / group.length) * 100) : 0,
-      color: d.color,
-      count: group.length,
-    };
-  }).filter((x) => x.count > 0);
-
-  const sorted = [...sensorial].sort((a, b) => b.value - a.value);
-  const bestAttr = sorted[0];
-  const worstAttr = sorted[sorted.length - 1];
-
-  const descriptiveCommentsList = filtered
-    .filter((d) => d.descriptiveComments && d.descriptiveComments.trim().length > 0)
-    .slice(-12)
-    .reverse();
-  const affectiveCommentsList = filtered
-    .filter((d) => d.affectiveComments && d.affectiveComments.trim().length > 0)
-    .slice(-12)
-    .reverse();
-
-  const animCount = useCountUp(acceptancePct);
-
-  async function fetchStats() {
-    if (!isLoaded || !isSignedIn) return;
-    const token = await getToken();
-    if (!token) throw new Error("No se pudo obtener token de administracion.");
-    const rows = await obtenerEstadisticas({
-      token,
-    });
-    setData(rows);
-  }
-
-  function refresh() {
-    runWithLoader(async () => {
-      try {
-        await fetchStats();
-        toast.success("Estadisticas actualizadas");
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "No se pudieron actualizar las estadisticas.",
-        );
-      }
-    });
-  }
-
-  function clearFilters() {
-    setFDiet("all");
-    setFSex("all");
-    setFFrom("");
-    setFTo("");
-  }
-
-  const hasFilters = fDiet !== "all" || fSex !== "all" || fFrom || fTo;
-
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-    runWithLoader(async () => {
-      try {
-        await fetchStats();
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "No se pudieron cargar estadisticas del backend.",
-        );
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fDiet, fSex, fFrom, fTo, isLoaded, isSignedIn]);
 
   const lastUpdate = new Date().toLocaleString("es-AR", {
     day: "2-digit",
@@ -364,671 +159,86 @@ function AdminPage() {
     minute: "2-digit",
   });
 
+  function refresh() {
+    runWithLoader(async () => {
+      await refreshStats();
+    });
+  }
+
+  async function handleExportPdf() {
+    try {
+      const blob = await exportarPDF(data, {
+        filters: {
+          diet: filters.diet,
+          sex: filters.sex,
+          from: filters.from || "",
+          to: filters.to || "",
+        },
+      });
+      descargarBlob(blob, `nutrilen-dashboard-${Date.now()}.pdf`);
+      toast.success("PDF descargado");
+    } catch {
+      toast.error("No se pudo exportar el PDF.");
+    }
+  }
+
+  async function handleExportExcel() {
+    try {
+      const token = await getToken();
+      const blob = await exportarExcel(data, {
+        filters: {
+          diet: filters.diet,
+          sex: filters.sex,
+          from: filters.from || "",
+          to: filters.to || "",
+        },
+      }, token ?? undefined);
+      descargarBlob(blob, `nutrilen-encuestas-${Date.now()}.xlsx`);
+      toast.success("Excel descargado");
+    } catch {
+      toast.error("No se pudo exportar el archivo.");
+    }
+  }
+
   return (
     <div className="min-h-screen w-full max-w-[100svw] overflow-x-hidden bg-background text-foreground font-sans">
       <Navbar />
       <PageLoader show={showLoader} />
       <main className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-7 sm:px-6 sm:py-10 lg:py-14">
-        {/* Header */}
-        <header className="min-w-0 space-y-5 lg:flex lg:items-end lg:justify-between lg:gap-6 lg:space-y-0">
-          <div className="min-w-0 max-w-3xl">
-            <span className="inline-block rounded-full bg-[color:var(--orange-yellow)]/25 px-3 py-1 text-xs font-medium text-[color:var(--vandyke)]">
-              Panel administrativo
-            </span>
-            <h1 className="mt-4 max-w-full break-words font-serif text-3xl font-semibold leading-[1.02] tracking-tight text-[color:var(--vandyke)] min-[420px]:text-4xl sm:text-5xl">
-              Resultados de la evaluación
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Dashboard académico de análisis sensorial del medallón de lenteja.
-            </p>
-          </div>
-          <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[360px]">
-            <button
-              type="button"
-              onClick={refresh}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--moss)] px-4 py-2.5 text-xs font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)] disabled:opacity-50"
-              disabled={showLoader}
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${showLoader ? "animate-spin" : ""}`} />
-              {showLoader ? "Actualizando..." : "Actualizar"}
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const blob = await exportarPDF(filtered);
-                  descargarBlob(blob, `nutrilen-dashboard-${Date.now()}.pdf`);
-                  toast.success("PDF descargado");
-                } catch {
-                  toast.error("No se pudo exportar el PDF.");
-                }
-              }}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-4 py-2.5 text-xs font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Exportar PDF
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const blob = await exportarExcel(filtered);
-                  descargarBlob(blob, `nutrilen-encuestas-${Date.now()}.xlsx`);
-                  toast.success("Excel descargado");
-                } catch {
-                  toast.error("No se pudo exportar el archivo.");
-                }
-              }}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-4 py-2.5 text-xs font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              Exportar Excel
-            </button>
-          </div>
-        </header>
+        <AdminHeader
+          isRefreshing={showLoader}
+          onRefresh={refresh}
+          onExportPdf={handleExportPdf}
+          onExportExcel={handleExportExcel}
+        />
 
-        {/* Filters */}
-        <section className="mt-8 min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[auto_repeat(4,minmax(0,1fr))_auto] lg:items-end">
-            <div className="flex items-center gap-2 text-[color:var(--vandyke)] sm:col-span-2 lg:col-span-1">
-              <Filter className="h-4 w-4 text-[color:var(--pumpkin)]" />
-              <span className="text-sm font-semibold">Filtros</span>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Dieta</label>
-              <select
-                value={fDiet}
-                onChange={(e) => setFDiet(e.target.value as Diet | "all")}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
-              >
-                <option value="all">Todas</option>
-                {DIET_OPTIONS.map((d) => (
-                  <option key={d.id} value={d.id}>{d.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Sexo</label>
-              <select
-                value={fSex}
-                onChange={(e) => setFSex(e.target.value as Sex | "all")}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
-              >
-                <option value="all">Todos</option>
-                {SEX_OPTIONS.map((s) => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Desde</label>
-              <input
-                type="date"
-                value={fFrom}
-                onChange={(e) => setFFrom(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Hasta</label>
-              <input
-                type="date"
-                value={fTo}
-                onChange={(e) => setFTo(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-[color:var(--vandyke)] focus:border-[color:var(--pumpkin)] focus:outline-none"
-              />
-            </div>
-            {hasFilters && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="w-full rounded-full px-3 py-2 text-center text-xs font-semibold text-[color:var(--pumpkin)] hover:bg-[color:var(--pumpkin)]/10 sm:w-auto lg:justify-self-end"
-              >
-                Limpiar filtros
-              </button>
-            )}
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-            Mostrando <strong className="text-[color:var(--vandyke)]">{total}</strong> participantes · Última actualización: {lastUpdate}
-          </p>
-        </section>
+        <StatsFilters
+          filters={filters}
+          total={total}
+          lastUpdate={lastUpdate}
+          hasActiveFilters={hasActiveFilters}
+          onUpdate={updateFilter}
+          onClear={clearFilters}
+        />
 
-        {/* KPIs */}
-        <section className="mt-6 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            { icon: Users, label: "Participantes", value: total, color: MOSS },
-            { icon: ClipboardCheck, label: "Encuestas completas", value: total, color: ORANGE },
-            { icon: Star, label: "Puntaje global", value: globalScore.toFixed(1), color: VANDYKE },
-            { icon: ThumbsUp, label: "Aceptación", value: `${acceptancePct}%`, color: PUMPKIN },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-soft)] sm:p-5"
-            >
-              <div
-                className="grid h-10 w-10 place-items-center rounded-xl"
-                style={{
-                  backgroundColor: `color-mix(in oklab, ${s.color} 16%, transparent)`,
-                  color: s.color,
-                }}
-              >
-                <s.icon className="h-5 w-5" />
-              </div>
-              <p className="mt-4 text-sm text-muted-foreground">{s.label}</p>
-              <p className="mt-1 font-serif text-3xl font-semibold text-[color:var(--vandyke)]">
-                {s.value}
-              </p>
-            </div>
-          ))}
-        </section>
-
-        {/* Radar + Promedios */}
-        <section className="mt-8 grid min-w-0 gap-6 xl:grid-cols-2">
-          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-            <div>
-              <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-                Perfil sensorial
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Evaluación promedio por atributo (escala 1-5). Tocá los chips para activar o desactivar atributos.
-              </p>
-            </div>
-            <div className="mt-4 flex min-w-0 flex-wrap gap-1.5">
-              {ATTRIBUTES.map((a) => {
-                const on = activeAttrs.includes(a.key);
-                return (
-                  <button
-                    key={a.key}
-                    onClick={() =>
-                      setActiveAttrs((s) =>
-                        s.includes(a.key) ? s.filter((x) => x !== a.key) : [...s, a.key],
-                      )
-                    }
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition sm:px-3 sm:text-xs ${
-                      on
-                        ? "border-[color:var(--moss)] bg-[color:var(--moss)] text-[color:var(--primary-foreground)]"
-                        : "border-border bg-card text-muted-foreground hover:border-[color:var(--moss)]/40"
-                    }`}
-                  >
-                    {a.label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-4 h-80 sm:h-96">
-              <ClientOnly fallback={<div className="h-full" />}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart
-                    data={radarData}
-                    outerRadius="62%"
-                    margin={{ top: 24, right: 38, bottom: 24, left: 38 }}
-                  >
-                    <PolarGrid stroke="#65382B22" />
-                    <PolarAngleAxis
-                      dataKey="metricShort"
-                      tick={{ fill: VANDYKE, fontSize: 11, fontWeight: 700 }}
-                    />
-                    <PolarRadiusAxis
-                      angle={90}
-                      domain={[0, 5]}
-                      tick={false}
-                      axisLine={false}
-                    />
-                    <Radar
-                      dataKey="value"
-                      stroke={MOSS}
-                      fill={MOSS}
-                      fillOpacity={0.35}
-                      strokeWidth={2}
-                      isAnimationActive
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid #65382B22",
-                        background: "var(--card)",
-                        color: "var(--vandyke)",
-                      }}
-                      formatter={(v: number) => [`${v.toFixed(1)} / 5`, "Promedio"]}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </ClientOnly>
-            </div>
-          </div>
-
-          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-            <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              Promedios por atributo
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">Puntaje sobre 5 por atributo descriptivo.</p>
-            <ul className="mt-6 space-y-4">
-              {sensorial.map((d) => (
-                <li key={d.metric}>
-                  <div className="flex items-baseline justify-between text-sm">
-                    <span className="font-medium text-[color:var(--vandyke)]">{d.metric}</span>
-                    <span className="font-serif text-lg font-semibold text-[color:var(--moss)]">
-                      {d.value.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[color:var(--cream-deep)]">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${(d.value / 5) * 100}%`,
-                        background: `linear-gradient(to right, ${MOSS}, ${ORANGE})`,
-                      }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* Attribute comparison */}
-        <section className="mt-6">
-          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-            <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              Comparativa de atributos
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Atributos activos en el perfil sensorial.
-            </p>
-            <ul className="mt-6 space-y-4">
-              {barsData.map((d, i) => {
-                const color = i % 2 === 0 ? MOSS : ORANGE;
-                return (
-                  <li key={d.metric}>
-                    <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="min-w-0 truncate font-semibold text-[color:var(--vandyke)]">
-                        {d.metric}
-                      </span>
-                      <span className="shrink-0 font-serif text-lg font-semibold" style={{ color }}>
-                        {d.value.toFixed(1)}
-                        <span className="ml-1 text-xs font-sans font-medium text-muted-foreground">/ 5</span>
-                      </span>
-                    </div>
-                    <div className="mt-2 h-3 overflow-hidden rounded-full bg-[color:var(--cream-deep)]">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${(d.value / 5) * 100}%`,
-                          background: `linear-gradient(to right, ${color}, ${PUMPKIN})`,
-                        }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </section>
-
-        {/* Frecuencia horaria */}
-        <section className="mt-6">
-          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-              <div>
-                <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-                  Frecuencia de consumo por hora
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Cantidad de encuestas completadas según la hora del día (0-23 h). Permite identificar
-                  en qué franja horaria se prefiere consumir el medallón de lenteja.
-                </p>
-              </div>
-              <div className="hidden items-center gap-2 rounded-full bg-[color:var(--orange-yellow)]/20 px-3 py-1 text-xs font-semibold text-[color:var(--vandyke)] sm:inline-flex">
-                <Clock className="h-3.5 w-3.5 text-[color:var(--pumpkin)]" />
-                {hasHourly ? `Pico: ${peakHour.label} (${peakHour.count})` : "Sin datos"}
-              </div>
-            </div>
-            <div className="mt-6 max-w-full overflow-hidden pb-2">
-              <ClientOnly fallback={<div className="h-full" />}>
-                <div className="h-72 w-full min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    data={hourlyDist}
-                    margin={{ top: 8, right: 4, left: -28, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="hourlyFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={PUMPKIN} stopOpacity={0.35} />
-                        <stop offset="100%" stopColor={PUMPKIN} stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="#65382B14" vertical={false} />
-                    <XAxis
-                      dataKey="label"
-                      axisLine={false}
-                      tickLine={false}
-                      interval={3}
-                      tick={{ fill: VANDYKE, fontSize: 9, fontWeight: 500 }}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#65382B88", fontSize: 11 }}
-                    />
-                    <Tooltip
-                      cursor={{ stroke: PUMPKIN, strokeOpacity: 0.25, strokeWidth: 2 }}
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid #65382B22",
-                        background: "var(--card)",
-                        color: "var(--vandyke)",
-                      }}
-                      labelFormatter={(l) => `Hora ${l}`}
-                      formatter={(v: number) => [`${v} encuesta${v === 1 ? "" : "s"}`, "Frecuencia"]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="count"
-                      stroke="none"
-                      fill="url(#hourlyFill)"
-                      isAnimationActive
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke={PUMPKIN}
-                      strokeWidth={2.5}
-                      dot={{ r: 3.5, fill: VANDYKE, stroke: PUMPKIN, strokeWidth: 2 }}
-                      activeDot={{ r: 6, fill: PUMPKIN, stroke: "#fff", strokeWidth: 2 }}
-                      isAnimationActive
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-                </div>
-              </ClientOnly>
-            </div>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Las marcas inferiores indican la hora del día; cuanto más alta aparece la línea, mayor fue la cantidad de encuestas registradas en esa franja.
-            </p>
-          </div>
-        </section>
-
-        {/* Dietas + Sexo */}
-        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-2">
-          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-            <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              Distribución de dietas
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Composición de la muestra evaluada ({total} participantes).
-            </p>
-            <div className="mt-4 h-72 sm:h-64">
-              <ClientOnly fallback={<div className="h-full" />}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={dietDist.filter((d) => d.value > 0)}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={50}
-                      outerRadius={90}
-                      paddingAngle={3}
-                      stroke="none"
-                    >
-                      {dietDist.map((d) => (
-                        <Cell key={d.name} fill={d.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid #65382B22",
-                        background: "var(--card)",
-                      }}
-                      formatter={(v: number, n) => [`${v} participantes`, n]}
-                    />
-                    <Legend
-                      verticalAlign="bottom"
-                      iconType="circle"
-                      formatter={(v) => (
-                        <span style={{ color: VANDYKE, fontSize: 12 }}>{v}</span>
-                      )}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </ClientOnly>
-            </div>
-            <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
-              {dietDist.map((d) => (
-                <li key={d.id} className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
-                    {d.name}
-                  </span>
-                  <span className="font-semibold text-[color:var(--vandyke)]">
-                    {d.pct}% ({d.value})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-            <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              Distribución por sexo biológico
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Composición demográfica de la muestra.
-            </p>
-            <ul className="mt-6 space-y-4">
-              {sexDist.map((s) => (
-                <li key={s.id}>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="min-w-0 truncate font-medium text-[color:var(--vandyke)]">
-                      {s.name}
-                    </span>
-                    <span className="shrink-0 font-serif text-lg font-semibold" style={{ color: s.color }}>
-                      {s.pct}% <span className="text-xs font-sans font-medium text-muted-foreground">({s.value})</span>
-                    </span>
-                  </div>
-                  <div className="mt-2 h-3 overflow-hidden rounded-full bg-[color:var(--cream-deep)]">
-                    <div
-                      className="h-full min-w-1 rounded-full transition-all duration-700"
-                      style={{
-                        width: `${Math.max(s.pct, s.value > 0 ? 4 : 0)}%`,
-                        backgroundColor: s.color,
-                      }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* Aceptación por dieta */}
-        {dietAcceptance.length > 0 && (
-          <section className="mt-6">
-            <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-                <div>
-                  <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-                    Aceptación según tipo de dieta
-                  </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Porcentaje de aprobación del producto según el perfil alimentario.
-                  </p>
-                </div>
-                <Heart className="h-5 w-5 text-[color:var(--pumpkin)]" />
-              </div>
-              <ul className="mt-6 space-y-5">
-                {dietAcceptance.map((d, i) => (
-                  <li key={d.name}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 font-medium text-[color:var(--vandyke)]">
-                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                        {d.name}
-                        <span className="text-xs text-muted-foreground">({d.count})</span>
-                      </span>
-                      <span className="font-serif text-lg font-semibold" style={{ color: d.color }}>
-                        {d.value}%
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <AnimatedBar value={d.value} color={d.color} delay={i * 120} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        )}
-
-        {/* Mejor / Peor */}
-        {bestAttr && worstAttr && (
-          <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-2">
-            <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] sm:rounded-3xl sm:p-6">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--moss)]/15 text-[color:var(--moss)]">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mejor valorado</p>
-                  <h3 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">{bestAttr.metric}</h3>
-                </div>
-                <p className="ml-auto font-serif text-2xl font-semibold text-[color:var(--moss)] sm:text-3xl">
-                  {bestAttr.value.toFixed(1)}
-                </p>
-              </div>
-            </div>
-            <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] sm:rounded-3xl sm:p-6">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--pumpkin)]/15 text-[color:var(--pumpkin)]">
-                  <TrendingDown className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menor valoración</p>
-                  <h3 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">{worstAttr.metric}</h3>
-                </div>
-                <p className="ml-auto font-serif text-2xl font-semibold text-[color:var(--pumpkin)] sm:text-3xl">
-                  {worstAttr.value.toFixed(1)}
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Comentarios agregados */}
-        <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-2">
-          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--moss)]/15 text-[color:var(--moss)]">
-                <MessageSquareQuote className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Comentarios y observaciones
-                </p>
-                <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-                  Observaciones descriptivas
-                </h2>
-              </div>
-              <span className="ml-auto rounded-full bg-[color:var(--moss)]/10 px-2.5 py-0.5 text-xs font-semibold text-[color:var(--moss)]">
-                {descriptiveCommentsList.length}
-              </span>
-            </div>
-            <ul className="mt-5 space-y-3 max-h-80 overflow-y-auto pr-1">
-              {descriptiveCommentsList.length === 0 && (
-                <li className="text-sm text-muted-foreground">
-                  No hay comentarios descriptivos para los filtros aplicados.
-                </li>
-              )}
-              {descriptiveCommentsList.map((c) => (
-                <li
-                  key={c.id}
-                  className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--vandyke)]/90 transition hover:border-[color:var(--moss)]/50"
-                >
-                  <p className="leading-relaxed">&quot;{c.descriptiveComments}&quot;</p>
-                  <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} · {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--pumpkin)]/15 text-[color:var(--pumpkin)]">
-                <MessageCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Comentarios y observaciones
-                </p>
-                <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-                  Observaciones afectivas
-                </h2>
-              </div>
-              <span className="ml-auto rounded-full bg-[color:var(--pumpkin)]/10 px-2.5 py-0.5 text-xs font-semibold text-[color:var(--pumpkin)]">
-                {affectiveCommentsList.length}
-              </span>
-            </div>
-            <ul className="mt-5 space-y-3 max-h-80 overflow-y-auto pr-1">
-              {affectiveCommentsList.length === 0 && (
-                <li className="text-sm text-muted-foreground">
-                  No hay comentarios afectivos para los filtros aplicados.
-                </li>
-              )}
-              {affectiveCommentsList.map((c) => (
-                <li
-                  key={c.id}
-                  className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--vandyke)]/90 transition hover:border-[color:var(--pumpkin)]/50"
-                >
-                  <p className="leading-relaxed">&quot;{c.affectiveComments}&quot;</p>
-                  <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {DIET_OPTIONS.find((d) => d.id === c.diet)?.label} · {SEX_OPTIONS.find((s) => s.id === c.sex)?.label}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <section className="mt-6">
-          <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-8">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-1"
-              style={{ background: `linear-gradient(to right, ${MOSS}, ${ORANGE}, ${PUMPKIN})` }}
-            />
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--vandyke)]/10 text-[color:var(--vandyke)]">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Conclusión general
-                </p>
-                <h2 className="font-serif text-2xl font-semibold text-[color:var(--vandyke)]">
-                  Resumen interpretativo
-                </h2>
-              </div>
-              <span className="ml-auto font-serif text-2xl font-semibold tabular-nums text-[color:var(--moss)] sm:text-3xl">
-                {Math.round(animCount)}%
-              </span>
-            </div>
-            {total > 0 ? (
-              <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-[color:var(--vandyke)]/85">
-                Sobre <strong>{total}</strong> participantes, el producto presenta un{" "}
-                <strong>{acceptancePct}%</strong> de aceptación. El atributo mejor valorado es{" "}
-                <span className="font-semibold text-[color:var(--moss)]">{bestAttr.metric}</span> ({bestAttr.value.toFixed(1)}/5),
-                mientras que <span className="font-semibold text-[color:var(--pumpkin)]">{worstAttr.metric}</span> ({worstAttr.value.toFixed(1)}/5)
-                representa el aspecto con mayor margen de mejora.
-              </p>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No hay datos para los filtros seleccionados.
-              </p>
-            )}
-          </div>
-        </section>
+        <KpiGrid total={total} globalScore={globalScore} acceptancePct={acceptancePct} />
+        <DistributionCharts
+          total={total}
+          dietDist={dietDist}
+          sexDist={sexDist}
+          dietAcceptance={dietAcceptance}
+        />
+        <HourlyChart hourlyDist={hourlyDist} hasHourly={hasHourly} peakHour={peakHour} />
+        <SensorialSection sensorial={sensorial} />
+        <CommentsPanel
+          descriptiveCommentsList={descriptiveCommentsList}
+          affectiveCommentsList={affectiveCommentsList}
+          bestAttr={bestAttr}
+          worstAttr={worstAttr}
+          total={total}
+          acceptancePct={acceptancePct}
+          animCount={animCount}
+        />
 
         <p className="mt-8 text-center text-xs text-muted-foreground sm:text-right">
           NutriLen · Proyecto integrador ISI x Nutrición
@@ -1038,7 +248,4 @@ function AdminPage() {
     </div>
   );
 }
-
-
-
 

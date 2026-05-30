@@ -15,7 +15,6 @@ import type { SensorialItem } from "./admin-dashboard.types";
 
 const VANDYKE = "#65382B";
 const MOSS = "#898C32";
-const PUMPKIN = "#FF6D0E";
 const ORANGE = "#F4B223";
 
 interface SensorialSectionProps {
@@ -25,7 +24,6 @@ interface SensorialSectionProps {
 export function SensorialSection({ sensorial }: SensorialSectionProps) {
   const [activeAttrs, setActiveAttrs] = useState<AttrKey[]>(ATTRIBUTES.map((a) => a.key));
   const radarData = sensorial.filter((d) => activeAttrs.includes(d.key));
-  const barsData = radarData;
 
   return (
     <>
@@ -130,44 +128,8 @@ export function SensorialSection({ sensorial }: SensorialSectionProps) {
         </div>
       </section>
 
-      <section className="mt-6">
-        <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-          <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-            Comparativa de atributos
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Atributos activos en el perfil sensorial.
-          </p>
-          <ul className="mt-6 space-y-4">
-            {barsData.map((d, i) => {
-              const color = i % 2 === 0 ? MOSS : ORANGE;
-              return (
-                <li key={d.metric}>
-                  <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="min-w-0 truncate font-semibold text-[color:var(--vandyke)]">
-                      {d.metric}
-                    </span>
-                    <span className="shrink-0 font-serif text-lg font-semibold" style={{ color }}>
-                      {d.value.toFixed(1)}
-                      <span className="ml-1 text-xs font-sans font-medium text-muted-foreground">/ 5</span>
-                    </span>
-                  </div>
-                  <div className="mt-2 h-3 overflow-hidden rounded-full bg-[color:var(--cream-deep)]">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${(d.value / 5) * 100}%`,
-                        background: `linear-gradient(to right, ${color}, ${PUMPKIN})`,
-                      }}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </section>
     </>
   );
 }
+
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Beef,
@@ -120,7 +121,7 @@ export default function Index() {
           </div>
           <div className="relative animate-reveal-up" style={{ animationDelay: "0.2s" }}>
             <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-[color:var(--orange-yellow)]/30 to-[color:var(--pumpkin)]/20 blur-2xl" />
-            <img
+            <Image
               src="/images/lentil-medallion.jpg"
               alt="Medallón de lenteja servido en plato de cerámica"
               width={1280}

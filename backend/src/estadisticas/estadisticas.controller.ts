@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, Res, UseGuards } from "@nestjs/common";
+import { Response } from "express";
 import { AdminGuard } from "../admin/guards/admin.guard";
 import { GetEstadisticasQueryDto } from "./dto/get-estadisticas-query.dto";
 import { EstadisticasService } from "./estadisticas.service";
@@ -16,5 +17,19 @@ export class EstadisticasController {
   @Get()
   async getStats(@Query() query: GetEstadisticasQueryDto) {
     return this.estadisticasService.getSurveys(query);
+  }
+
+  @UseGuards(AdminGuard)
+  @Get("excel")
+  async exportExcel(@Query() query: GetEstadisticasQueryDto, @Res() res: Response) {
+    const buffer = await this.estadisticasService.getExcelReport(query);
+    const filename = `nutrilen-encuestas-${Date.now()}.xlsx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
   }
 }

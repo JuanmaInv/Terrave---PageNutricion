@@ -195,8 +195,13 @@ function AdminPage() {
       }, token ?? undefined);
       descargarBlob(blob, `nutrilen-encuestas-${Date.now()}.xlsx`);
       toast.success("Excel descargado");
-    } catch {
-      toast.error("No se pudo exportar el archivo.");
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "No se pudo exportar el archivo.";
+      console.error("Excel export error:", error);
+      toast.error(message);
     }
   }
 

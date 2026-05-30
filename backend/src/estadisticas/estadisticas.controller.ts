@@ -1,4 +1,11 @@
-import { Controller, Get, Query, Res, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  InternalServerErrorException,
+  Query,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import { Response } from "express";
 import { AdminGuard } from "../admin/guards/admin.guard";
 import { GetEstadisticasQueryDto } from "./dto/get-estadisticas-query.dto";
@@ -22,14 +29,19 @@ export class EstadisticasController {
   @UseGuards(AdminGuard)
   @Get("excel")
   async exportExcel(@Query() query: GetEstadisticasQueryDto, @Res() res: Response) {
-    const buffer = await this.estadisticasService.getExcelReport(query);
-    const filename = `nutrilen-encuestas-${Date.now()}.xlsx`;
+    try {
+      const buffer = await this.estadisticasService.getExcelReport(query);
+      const filename = `nutrilen-encuestas-${Date.now()}.xlsx`;
 
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.send(buffer);
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown excel export error";
+      throw new InternalServerErrorException(`Excel export failed: ${detail}`);
+    }
   }
 }

@@ -121,6 +121,7 @@ function ClientOnly({
 }
 
 function AdminPage() {
+  const { getToken } = useAuth();
   const { show: showLoader, run: runWithLoader, setShow: setLoader } = useNavLoader(1200);
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useSurveyFilters();
   const { data, refresh: refreshStats } = useSurveyStats(filters);
@@ -166,7 +167,14 @@ function AdminPage() {
 
   async function handleExportPdf() {
     try {
-      const blob = await exportarPDF(data);
+      const blob = await exportarPDF(data, {
+        filters: {
+          diet: filters.diet,
+          sex: filters.sex,
+          from: filters.from || "",
+          to: filters.to || "",
+        },
+      });
       descargarBlob(blob, `nutrilen-dashboard-${Date.now()}.pdf`);
       toast.success("PDF descargado");
     } catch {
@@ -176,7 +184,15 @@ function AdminPage() {
 
   async function handleExportExcel() {
     try {
-      const blob = await exportarExcel(data);
+      const token = await getToken();
+      const blob = await exportarExcel(data, {
+        filters: {
+          diet: filters.diet,
+          sex: filters.sex,
+          from: filters.from || "",
+          to: filters.to || "",
+        },
+      }, token ?? undefined);
       descargarBlob(blob, `nutrilen-encuestas-${Date.now()}.xlsx`);
       toast.success("Excel descargado");
     } catch {
@@ -206,14 +222,14 @@ function AdminPage() {
         />
 
         <KpiGrid total={total} globalScore={globalScore} acceptancePct={acceptancePct} />
-        <SensorialSection sensorial={sensorial} />
-        <HourlyChart hourlyDist={hourlyDist} hasHourly={hasHourly} peakHour={peakHour} />
         <DistributionCharts
           total={total}
           dietDist={dietDist}
           sexDist={sexDist}
           dietAcceptance={dietAcceptance}
         />
+        <HourlyChart hourlyDist={hourlyDist} hasHourly={hasHourly} peakHour={peakHour} />
+        <SensorialSection sensorial={sensorial} />
         <CommentsPanel
           descriptiveCommentsList={descriptiveCommentsList}
           affectiveCommentsList={affectiveCommentsList}
@@ -232,3 +248,4 @@ function AdminPage() {
     </div>
   );
 }
+

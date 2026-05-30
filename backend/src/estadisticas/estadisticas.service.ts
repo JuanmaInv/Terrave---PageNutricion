@@ -70,10 +70,17 @@ export class EstadisticasService {
 
   private async callPythonFunction(url: string, payload: unknown): Promise<Buffer> {
     const internalToken = process.env.EXCEL_EXPORT_INTERNAL_TOKEN?.trim();
+    const vercelBypass = process.env.VERCEL_PROTECTION_BYPASS?.trim();
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (internalToken) headers["x-excel-export-token"] = internalToken;
+    if (vercelBypass) headers["x-vercel-protection-bypass"] = vercelBypass;
+    const requestUrl = new URL(url);
+    if (vercelBypass) {
+      requestUrl.searchParams.set("x-vercel-protection-bypass", vercelBypass);
+      requestUrl.searchParams.set("x-vercel-set-bypass-cookie", "true");
+    }
 
-    const response = await fetch(url, {
+    const response = await fetch(requestUrl.toString(), {
       method: "POST",
       headers,
       body: JSON.stringify(payload),

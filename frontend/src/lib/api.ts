@@ -170,14 +170,21 @@ export async function exportarExcel(
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
     } catch (error) {
-      // Resilience fallback: if backend export fails, still generate local report.
-      const { blob } = await ReportFactory.exportAs("excel", surveys, context);
-      console.error("Backend Excel export failed. Using local exporter fallback.", error);
-      return blob;
+      // In development we allow local fallback; in deployed envs we fail fast
+      // so the team can fix backend exporter issues and keep dynamic reports.
+      if (ALLOW_LOCAL_FALLBACK) {
+        const { blob } = await ReportFactory.exportAs("excel", surveys, context);
+        console.error("Backend Excel export failed. Using local exporter fallback.", error);
+        return blob;
+      }
+      throw error;
     }
   }
-  const { blob } = await ReportFactory.exportAs("excel", surveys, context);
-  return blob;
+  if (ALLOW_LOCAL_FALLBACK) {
+    const { blob } = await ReportFactory.exportAs("excel", surveys, context);
+    return blob;
+  }
+  throw new Error("Backend no configurado para exportación Excel dinámica.");
 }
 
 export function descargarBlob(blob: Blob, filename: string): void {

@@ -1,5 +1,6 @@
 import { loadSurveys, saveSurvey, type SurveyResponse } from "./nutrilen";
 import { ReportFactory } from "./reports/report.factory";
+import type { ReportContext } from "./reports/report.exporter.interface";
 
 export { ReportFactory };
 
@@ -40,6 +41,33 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`API ${res.status} ${res.statusText}${body ? `: ${body}` : ""}`);
   }
   return (await res.json()) as T;
+}
+
+async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
+  const normalizedBase = API_URL.replace(/\/+$/, "");
+  const primaryUrl = `${normalizedBase}${path}`;
+  const prefixedUrl = `${normalizedBase}${API_PREFIX}${path}`;
+  const shouldTryPrefixedFallback =
+    normalizedBase.length > 0 && !normalizedBase.endsWith(API_PREFIX);
+
+  let res = await fetch(primaryUrl, {
+    headers: { ...(init?.headers || {}) },
+    ...init,
+  });
+
+  if (!res.ok && res.status === 404 && shouldTryPrefixedFallback) {
+    res = await fetch(prefixedUrl, {
+      headers: { ...(init?.headers || {}) },
+      ...init,
+    });
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`API ${res.status} ${res.statusText}${body ? `: ${body}` : ""}`);
+  }
+
+  return await res.blob();
 }
 
 // ---------------------------------------------------------------------------
@@ -114,13 +142,32 @@ export async function validarAdmin(
 // Re-exported for backward compatibility with existing callers.
 // ---------------------------------------------------------------------------
 
-export async function exportarPDF(surveys: SurveyResponse[]): Promise<Blob> {
-  const { blob } = await ReportFactory.exportAs("pdf", surveys);
+export async function exportarPDF(surveys: SurveyResponse[], context?: ReportContext): Promise<Blob> {
+  const { blob } = await ReportFactory.exportAs("pdf", surveys, context);
   return blob;
 }
 
-export async function exportarExcel(surveys: SurveyResponse[]): Promise<Blob> {
-  const { blob } = await ReportFactory.exportAs("excel", surveys);
+export async function exportarExcel(
+  surveys: SurveyResponse[],
+  context?: ReportContext,
+  token?: string
+): Promise<Blob> {
+  if (hasBackend()) {
+    const query = new URLSearchParams();
+    if (context?.filters?.diet && context.filters.diet !== "all") {
+      query.set("diet", context.filters.diet);
+    }
+    if (context?.filters?.sex && context.filters.sex !== "all") {
+      query.set("sex", context.filters.sex);
+    }
+    if (context?.filters?.from) query.set("from", context.filters.from);
+    if (context?.filters?.to) query.set("to", context.filters.to);
+    const qs = query.toString();
+    return await requestBlob(`/estadisticas/excel${qs ? `?${qs}` : ""}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+  }
+  const { blob } = await ReportFactory.exportAs("excel", surveys, context);
   return blob;
 }
 

@@ -1,6 +1,6 @@
 import { ExcelReportExporter } from "./excel.report.exporter";
 import { PdfReportExporter } from "./pdf.report.exporter";
-import { type ReportExporter } from "./report.exporter.interface";
+import { type ReportContext, type ReportExporter } from "./report.exporter.interface";
 
 export type ReportType = "pdf" | "excel";
 
@@ -33,9 +33,13 @@ export class ReportFactory {
   }
 
   /** Convenience: export and return blob + suggested filename in one call */
-  static async exportAs(type: ReportType, surveys: import("../nutrilen").SurveyResponse[]): Promise<{ blob: Blob; filename: string }> {
+  static async exportAs(
+    type: ReportType,
+    surveys: import("../nutrilen").SurveyResponse[],
+    context?: ReportContext
+  ): Promise<{ blob: Blob; filename: string }> {
     const exporter = ReportFactory.create(type);
-    const blob = await exporter.export(surveys);
+    const blob = await exporter.export(surveys, context);
     return { blob, filename: exporter.filename() };
   }
 }

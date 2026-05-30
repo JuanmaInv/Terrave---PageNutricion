@@ -1,10 +1,10 @@
-import { type AttrKey, type Diet, type Sex, type SurveyResponse } from "./nutrilen.types";
-import { loadSurveys, saveSurvey, SEED_KEY, STORAGE_KEY } from "./nutrilen.storage";
+﻿import { type AttrKey, type Diet, type Sex, type SurveyResponse } from "./nutrilen.types";
+import { loadSurveys, SEED_KEY, STORAGE_KEY } from "./nutrilen.storage";
 
 /**
  * Seed data generation for development and local fallback mode.
- * Pattern: SRP — only demo data generation logic lives here.
- *          Builder (implicit) — constructs SurveyResponse objects step by step.
+ * Pattern: SRP â€” only demo data generation logic lives here.
+ *          Builder (implicit) â€” constructs SurveyResponse objects step by step.
  */
 
 function rand<T>(arr: T[]): T {
@@ -18,18 +18,18 @@ function randInt(min: number, max: number): number {
 const DESC_SAMPLES = [
   "Color dorado muy atractivo, aroma suave.",
   "Buena firmeza al corte, se mantiene cohesivo.",
-  "Aroma a especias agradable, sin notas extrañas.",
+  "Aroma a especias agradable, sin notas extraÃ±as.",
   "Textura un poco seca en el centro.",
   "Sabor tostado bien logrado, persistente.",
   "Untuosidad media, equilibrada.",
-  "Color homogéneo y apetitoso.",
+  "Color homogÃ©neo y apetitoso.",
 ];
 
 const AFF_SAMPLES = [
-  "Me gustó mucho la textura y el sabor.",
-  "Producto interesante, lo consumiría nuevamente.",
-  "Sabor agradable, mejoraría la jugosidad.",
-  "Muy bueno como opción saludable.",
+  "Me gustÃ³ mucho la textura y el sabor.",
+  "Producto interesante, lo consumirÃ­a nuevamente.",
+  "Sabor agradable, mejorarÃ­a la jugosidad.",
+  "Muy bueno como opciÃ³n saludable.",
   "Recomendable para quienes buscan alternativas vegetales.",
   "Le falta un poco de condimento.",
 ];
@@ -109,3 +109,4 @@ export function ensureSeed(count = 32): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
   window.localStorage.setItem(SEED_KEY, "1");
 }
+

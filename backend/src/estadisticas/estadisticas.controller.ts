@@ -33,11 +33,11 @@ export class EstadisticasController {
       const buffer = await this.estadisticasService.getExcelReport(query);
       const filename = `nutrilen-encuestas-${Date.now()}.xlsx`;
 
-      res.setHeader(
+      res.set(
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       );
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.set("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(buffer);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unknown excel export error";

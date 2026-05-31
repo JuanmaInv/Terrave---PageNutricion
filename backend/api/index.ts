@@ -1,6 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
-import { ValidationPipe } from "@nestjs/common";
+import { ValidationPipe, RequestMethod } from "@nestjs/common";
 import { AppModule } from "../src/app.module";
 import express, { type Express, type Request, type Response } from "express";
 
@@ -16,7 +16,9 @@ async function bootstrap(): Promise<void> {
     { logger: ["error", "warn"] }
   );
 
-  app.setGlobalPrefix("api/v1");
+  app.setGlobalPrefix("api/v1", {
+    exclude: [{ path: '/', method: RequestMethod.GET }]
+  });
   app.enableCors({
     origin: true,
     credentials: true
@@ -44,5 +46,5 @@ export default async function handler(
     });
   }
   await initPromise;
-  server(req, res);
+  (server as any)(req, res);
 }

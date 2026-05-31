@@ -7,6 +7,7 @@ import { EncuestasModule } from "./encuestas/encuestas.module";
 import { DatabaseModule } from "./database/database.module";
 import { AdminModule } from "./admin/admin.module";
 import { EstadisticasModule } from "./estadisticas/estadisticas.module";
+import { AppController } from "./app.controller";
 
 const envFilePath = [
   join(process.cwd(), ".env.local"),
@@ -26,6 +27,6 @@ const envFilePath = [
     AdminModule,
     EstadisticasModule
   ],
-  controllers: [HealthController]
+  controllers: [HealthController, AppController]
 })
 export class AppModule { }

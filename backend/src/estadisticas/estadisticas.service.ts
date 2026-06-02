@@ -1,105 +1,133 @@
 import { Injectable } from "@nestjs/common";
-import { DatabaseService } from "../database/database.service";
+import { spawn } from "child_process";
+import { existsSync } from "fs";
+import { join } from "path";
 import { GetEstadisticasQueryDto } from "./dto/get-estadisticas-query.dto";
+import { SurveyResponseDto } from "./dto/survey-response.dto";
+import { EstadisticasRepository } from "./repositories/estadisticas.repository";
 
-type SurveyRow = {
-  id: string;
-  fecha: string;
-  sexo: "femenino" | "masculino" | "otro";
-  dieta: "omnivoro" | "ovo_lacto" | "vegano" | "flexitariano" | "otro";
-  color: number;
-  aroma: number;
-  firmeza: number;
-  untuosidad: number;
-  sabor_tostado: number;
-  persistencia: number;
-  aceptacion: number;
-  liked: "si" | "no";
-  consume_again: "si" | "no" | "tal_vez";
-  recommend: number;
-  descriptive_comments: string | null;
-  affective_comments: string | null;
-};
-
+/**
+ * Estadisticas business logic — delegates all data access to EstadisticasRepository.
+ * Pattern: Repository (DIP applied)
+ * SOLID: SRP — this class orchestrates, the repository queries.
+ */
 @Injectable()
 export class EstadisticasService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly estadisticasRepository: EstadisticasRepository) {}
 
-  async getSurveys(query: GetEstadisticasQueryDto) {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-    let i = 1;
+  async getSurveys(query: GetEstadisticasQueryDto): Promise<SurveyResponseDto[]> {
+    return this.estadisticasRepository.findAll(query);
+  }
 
-    if (query.diet) {
-      conditions.push(`dieta = $${i++}`);
-      values.push(query.diet);
-    }
-    if (query.sex) {
-      conditions.push(`sexo = $${i++}`);
-      values.push(query.sex);
-    }
-    if (query.from) {
-      conditions.push(`fecha >= $${i++}`);
-      values.push(new Date(query.from).toISOString());
-    }
-    if (query.to) {
-      conditions.push(`fecha <= $${i++}`);
-      const end = new Date(query.to);
-      end.setHours(23, 59, 59, 999);
-      values.push(end.toISOString());
-    }
-
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-    const sqlCurrent = `
-      SELECT
-        id, fecha, sexo, dieta, color, aroma, firmeza, untuosidad, sabor_tostado, persistencia,
-        aceptacion, liked, consume_again, recommend, descriptive_comments, affective_comments
-      FROM public.encuestas
-      ${where}
-      ORDER BY fecha DESC
-    `;
-    const sqlLegacy = `
-      SELECT
-        id, fecha, sexo, dieta, color, aroma, firmeza, untuosidad, sabor_tostado, persistencia,
-        aceptacion, liked, consume_again, recommend,
-        comentarios_descriptivos AS descriptive_comments,
-        comentarios_afectivos AS affective_comments
-      FROM public.encuestas
-      ${where}
-      ORDER BY fecha DESC
-    `;
-
-    let result;
-    try {
-      result = await this.db.query<SurveyRow>(sqlCurrent, values);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message.includes("descriptive_comments") || message.includes("affective_comments")) {
-        result = await this.db.query<SurveyRow>(sqlLegacy, values);
-      } else {
-        throw error;
-      }
-    }
-
-    return result.rows.map((row: SurveyRow) => ({
-      id: row.id,
-      date: row.fecha,
-      sex: row.sexo,
-      diet: row.dieta,
-      attrs: {
-        color: row.color,
-        aroma: row.aroma,
-        firmeza: row.firmeza,
-        untuosidad: row.untuosidad,
-        sabor_tostado: row.sabor_tostado,
-        persistencia: row.persistencia
+  async getExcelReport(query: GetEstadisticasQueryDto): Promise<Buffer> {
+    const surveys = await this.getSurveys(query);
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      filters: {
+        diet: query.diet ?? "all",
+        sex: query.sex ?? "all",
+        from: query.from ?? "",
+        to: query.to ?? "",
       },
-      descriptiveComments: row.descriptive_comments ?? "",
-      acceptance: row.aceptacion,
-      liked: row.liked,
-      consumeAgain: row.consume_again,
-      recommend: row.recommend,
-      affectiveComments: row.affective_comments ?? ""
-    }));
+      surveys,
+    };
+
+    const url = this.getPythonExporterUrl();
+    if (url) {
+      return await this.callPythonFunction(url, payload);
+    }
+
+    const pythonExecutable = process.env.PYTHON_EXECUTABLE ?? "python";
+    const scriptPath = this.resolvePythonScriptPath();
+    return await this.runPythonExporter(pythonExecutable, scriptPath, payload);
+  }
+
+  private resolvePythonScriptPath(): string {
+    const cwd = process.cwd();
+    const candidates = [
+      join(cwd, "scripts", "generate_excel_report.py"),
+      join(cwd, "backend", "scripts", "generate_excel_report.py"),
+    ];
+
+    const found = candidates.find((path) => existsSync(path));
+    if (!found) {
+      throw new Error(
+        `Python exporter script not found. Checked: ${candidates.join(" | ")}`
+      );
+    }
+
+    return found;
+  }
+
+  private getPythonExporterUrl(): string | null {
+    const explicitUrl = process.env.EXCEL_PYTHON_EXPORT_URL?.trim();
+    if (explicitUrl) return explicitUrl;
+
+    const vercelUrl = process.env.VERCEL_URL?.trim();
+    if (vercelUrl) return `https://${vercelUrl}/python/excel-report`;
+    return null;
+  }
+
+  private async callPythonFunction(url: string, payload: unknown): Promise<Buffer> {
+    const internalToken = process.env.EXCEL_EXPORT_INTERNAL_TOKEN?.trim();
+    const vercelBypass = process.env.VERCEL_PROTECTION_BYPASS?.trim();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (internalToken) headers["x-excel-export-token"] = internalToken;
+    if (vercelBypass) headers["x-vercel-protection-bypass"] = vercelBypass;
+    const requestUrl = new URL(url);
+    if (vercelBypass) {
+      requestUrl.searchParams.set("x-vercel-protection-bypass", vercelBypass);
+      requestUrl.searchParams.set("x-vercel-set-bypass-cookie", "true");
+    }
+
+    const response = await fetch(requestUrl.toString(), {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Python exporter failed: ${response.status} ${response.statusText} ${text}`);
+    }
+
+    const arr = await response.arrayBuffer();
+    return Buffer.from(arr);
+  }
+
+  private runPythonExporter(python: string, scriptPath: string, payload: unknown): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const proc = spawn(python, [scriptPath], {
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+
+      const chunks: Buffer[] = [];
+      const errors: Buffer[] = [];
+
+      proc.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
+      proc.stderr.on("data", (chunk: Buffer) => errors.push(chunk));
+      proc.on("error", (error) => {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          reject(
+            new Error(
+              `Python executable not found ("${python}"). Configure PYTHON_EXECUTABLE or install Python in PATH.`
+            )
+          );
+          return;
+        }
+        reject(error);
+      });
+      proc.on("close", (code) => {
+        if (code !== 0) {
+          const stderr = Buffer.concat(errors).toString("utf8");
+          reject(new Error(stderr || `Excel exporter failed with code ${code}`));
+          return;
+        }
+        resolve(Buffer.concat(chunks));
+      });
+
+      proc.stdin.write(JSON.stringify(payload));
+      proc.stdin.end();
+    });
   }
 }

@@ -1,13 +1,16 @@
-import { Controller, Get, Headers } from "@nestjs/common";
-import { AdminService } from "./admin.service";
+import { Controller, Get, UseGuards } from "@nestjs/common";
+import { AdminGuard } from "./guards/admin.guard";
 
+/**
+ * Admin controller — exposes the /admin/me health-check endpoint.
+ * Protected by AdminGuard (Decorator pattern).
+ */
 @Controller("admin")
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
-
+  @UseGuards(AdminGuard)
   @Get("me")
-  async getMe(@Headers("authorization") authorization?: string) {
-    const token = this.adminService.getTokenFromAuthorization(authorization);
-    return this.adminService.validateAdminToken(token);
+  async getMe() {
+    // Guard already validated the token; return a simple success response.
+    return { isAdmin: true };
   }
 }

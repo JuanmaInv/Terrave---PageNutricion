@@ -1,18 +1,24 @@
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
-import { ValidationPipe } from "@nestjs/common";
+import { ValidationPipe, RequestMethod } from "@nestjs/common";
 import { AppModule } from "../src/app.module";
-import * as express from "express";
+import express, { type Express, type Request, type Response } from "express";
 
-const server: express.Express = express();
+const server: Express = express();
 
-export const createNestServer = async (expressInstance: express.Express) => {
+// Cached initialization promise para Vercel serverless
+let initPromise: Promise<void> | null = null;
+
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(
     AppModule,
-    new ExpressAdapter(expressInstance)
+    new ExpressAdapter(server),
+    { logger: ["error", "warn"] }
   );
 
-  app.setGlobalPrefix("api/v1");
+  app.setGlobalPrefix("api/v1", {
+    exclude: [{ path: '/', method: RequestMethod.GET }]
+  });
   app.enableCors({
     origin: true,
     credentials: true
@@ -26,9 +32,19 @@ export const createNestServer = async (expressInstance: express.Express) => {
   );
 
   await app.init();
-  return app;
-};
+}
 
-createNestServer(server);
-
-export default server;
+export default async function handler(
+  req: Request,
+  res: Response
+) {
+  // Inicializa una sola vez y reutiliza la instancia en requests siguientes
+  if (!initPromise) {
+    initPromise = bootstrap().catch((err) => {
+      initPromise = null; // resetea si falla para poder reintentar
+      throw err;
+    });
+  }
+  await initPromise;
+  (server as any)(req, res);
+}

@@ -1,5 +1,5 @@
-import { Leaf } from "lucide-react";
 import { useCallback, useState } from "react";
+import { TerraveMark } from "./TerraveMark";
 
 export function PageLoader({ show }: { show: boolean }) {
   return (
@@ -21,11 +21,11 @@ export function PageLoader({ show }: { show: boolean }) {
             }}
           />
           <span className="relative grid h-16 w-16 place-items-center rounded-full bg-[color:var(--vandyke)] text-[color:var(--cream)] shadow-[var(--shadow-soft)]">
-            <Leaf className="h-7 w-7" />
+            <TerraveMark className="h-9 w-9" strokeWidth={2.4} />
           </span>
         </div>
         <p className="font-serif text-xl font-semibold tracking-[0.32em] text-[color:var(--vandyke)]">
-          NUTRILEN
+          TERRAVE
         </p>
         <div className="flex gap-1.5">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--moss)]" style={{ animationDelay: "0ms" }} />

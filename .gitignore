@@ -1,4 +1,4 @@
-# Environment
+﻿# Environment
 .env
 .env.local
 .env.*.local
@@ -6,6 +6,13 @@ Nutrilen-Lovable/env
 
 # Dependencies
 node_modules
+.pnpm-store/
+
+# Python
+.venv/
+**/.venv/
+__pycache__/
+*.pyc
 
 # Build
 dist

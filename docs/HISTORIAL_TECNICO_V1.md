@@ -77,3 +77,59 @@
 3. `main`: rama de produccion estable.
 
 Regla aplicada: promover cambios por PR siguiendo `qa -> beta -> main` cuando exista diferencia real de codigo.
+
+## 6) Iteracion actual: Refactor SOLID + Patrones + Roles DB-first
+
+Estado:
+- En progreso de commits atomicos (1 archivo por commit).
+- Documentacion principal creada en:
+  - `docs/REFACTOR_TECNICO_V2_SOLID_PATRONES.md`
+  - `docs/REGISTRO_COMMITS_POR_ARCHIVO_QA_BETA.md`
+
+Cambios tecnicos de la iteracion:
+1. Frontend admin refactorizado por componentes + hooks + view model.
+2. Contratos tipados compartidos para dashboard admin.
+3. Seguridad de admin movida a validacion backend con rol en DB.
+4. Eliminacion de fallback de autorizacion por env publica.
+5. Esquema DB sin seed personal hardcodeado y con mejora de indices.
+
+Patrones reforzados:
+- Repository, Strategy, Decorator (Guard), Factory, Facade, Observer, ViewModel.
+
+SOLID reforzado:
+- SRP, OCP, ISP y DIP en frontend/backend.
+
+Nota de trazabilidad:
+- Cada commit de esta iteracion debe registrarse en
+  `docs/REGISTRO_COMMITS_POR_ARCHIVO_QA_BETA.md` con hash, archivo y validacion.
+
+## 7) Iteracion actual: Exportes Excel/PDF + ajuste CI/lint (QA)
+
+Fecha: 2026-05-29
+
+Objetivo:
+1. Resolver exportacion de Excel en localhost y en Vercel sin romper arquitectura SOLID/patrones.
+2. Mejorar formato del informe Excel para cliente final (tablas, resumen, graficos y detalle).
+3. Dejar frontend/backend pasando validaciones de lint/build.
+
+Cambios principales:
+1. Exportador Python incorporado y acoplado al backend NestJS por servicio.
+2. Ruta/import de Python corregidos para evitar `ModuleNotFoundError` en entorno local.
+3. Excel enriquecido a formato de informe completo:
+   - Filtros usados
+   - KPIs
+   - Promedios por atributo
+   - Distribuciones (dieta/sexo)
+   - Aceptacion por dieta
+   - Frecuencia por hora
+   - Perfil sensorial (radar)
+   - Comentarios descriptivos/afectivos
+   - Detalle de encuestas
+   - Guia de lectura
+4. Limpieza de warnings en frontend (ej. `next/image` en home).
+
+Patrones y buenas practicas reforzadas:
+1. Factory/Strategy para exportadores (`report.factory.ts` + contratos).
+2. SRP en separacion de builder Python vs orquestacion Nest.
+3. DIP mediante interfaces y contratos de reporte.
+4. Trazabilidad por commit atomico (1 archivo por commit) en QA.

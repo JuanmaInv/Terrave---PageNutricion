@@ -1,12 +1,14 @@
 import "reflect-metadata";
-import { ValidationPipe } from "@nestjs/common";
+import { ValidationPipe, RequestMethod } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix("api/v1");
+  app.setGlobalPrefix("api/v1", {
+    exclude: [{ path: '/', method: RequestMethod.GET }]
+  });
   app.enableCors({
     origin: true,
     credentials: true
@@ -21,7 +23,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);
-  console.log(`NutriLen backend listening on http://localhost:${port}/api/v1`);
+  console.log(`TERRAVE backend listening on http://localhost:${port}/api/v1`);
 }
 
 bootstrap();

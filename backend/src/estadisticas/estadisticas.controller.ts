@@ -6,7 +6,6 @@ import {
   Res,
   UseGuards,
 } from "@nestjs/common";
-import { Response } from "express";
 import { AdminGuard } from "../admin/guards/admin.guard";
 import { GetEstadisticasQueryDto } from "./dto/get-estadisticas-query.dto";
 import { EstadisticasService } from "./estadisticas.service";
@@ -28,7 +27,7 @@ export class EstadisticasController {
 
   @UseGuards(AdminGuard)
   @Get("excel")
-  async exportExcel(@Query() query: GetEstadisticasQueryDto, @Res() res: Response) {
+  async exportExcel(@Query() query: GetEstadisticasQueryDto, @Res() res: any) {
     try {
       const buffer = await this.estadisticasService.getExcelReport(query);
       const filename = `nutrilen-encuestas-${Date.now()}.xlsx`;

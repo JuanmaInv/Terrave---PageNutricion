@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.encuestas (
     
     -- Comentarios abiertos
     descriptive_comments TEXT,
+    willingness_to_pay TEXT,
     affective_comments TEXT
 );
 

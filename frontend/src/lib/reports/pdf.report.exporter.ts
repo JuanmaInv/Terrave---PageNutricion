@@ -80,6 +80,10 @@ export class PdfReportExporter implements ReportExporter {
       .map((s, i) => ({ idx: i + 1, text: s.affectiveComments?.trim() ?? "" }))
       .filter((x) => x.text.length > 0);
 
+    const pricing = surveys
+      .map((s, i) => ({ idx: i + 1, text: s.willingnessToPay?.trim() ?? "" }))
+      .filter((x) => x.text.length > 0);
+
     const addSectionTitle = (text: string, y: number) => {
       doc.setFillColor(...SURFACE);
       doc.setDrawColor(...BORDER);
@@ -264,6 +268,16 @@ export class PdfReportExporter implements ReportExporter {
         ? affective.map((d) => [`Participante ${d.idx}: ${d.text}`])
         : [["Sin observaciones afectivas para el filtro aplicado."]],
       headStyles: { fillColor: HEAD_SECONDARY, textColor: [255, 255, 255] },
+      margin: { left: MARGIN, right: MARGIN },
+    });
+
+    renderTable({
+      startY: (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14,
+      head: [["Disposicion a pagar (en pesos)"]],
+      body: pricing.length
+        ? pricing.map((d) => [`Participante ${d.idx}: ${d.text}`])
+        : [["Sin respuestas de precio para el filtro aplicado."]],
+      headStyles: { fillColor: HEAD_PRIMARY, textColor: [255, 255, 255] },
       margin: { left: MARGIN, right: MARGIN },
     });
 

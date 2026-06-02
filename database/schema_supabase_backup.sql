@@ -41,6 +41,7 @@ create table public.encuestas (
   liked character varying,
   consume_again character varying,
   recommend integer,
+  willingness_to_pay text,
 
   constraint encuestas_usuario_id_fkey
     foreign key (usuario_id)

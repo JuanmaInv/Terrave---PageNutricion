@@ -260,6 +260,7 @@ export default function EncuestaPage() {
   const [liked, setLiked] = useState<"si" | "no" | null>(null);
   const [consumeAgain, setConsumeAgain] = useState<"si" | "no" | "tal_vez" | null>(null);
   const [recommend, setRecommend] = useState(3);
+  const [willingnessToPay, setWillingnessToPay] = useState("");
   const [affectiveComments, setAffectiveComments] = useState("");
 
   function next() {
@@ -304,6 +305,7 @@ export default function EncuestaPage() {
       liked,
       consumeAgain,
       recommend,
+      willingnessToPay,
       affectiveComments,
     };
     setIsSubmitting(true);
@@ -441,6 +443,22 @@ export default function EncuestaPage() {
                     onChange={(v) => setAttrs((s) => ({ ...s, [a.key]: v }))}
                   />
                 ))}
+                <Card>
+                  <h3 className="font-semibold text-[color:var(--vandyke)]">
+                    Â¿CuÃ¡nto estÃ¡s dispuesto a pagar por el producto? (en pesos)
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    EscribÃ­ el valor o rango que te parecerÃ­a adecuado pagar.
+                  </p>
+                  <textarea
+                    value={willingnessToPay}
+                    onChange={(e) => setWillingnessToPay(e.target.value)}
+                    rows={3}
+                    placeholder="Ej.: $4.500 / Entre $4.000 y $5.000"
+                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-muted-foreground/70 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30"
+                  />
+                </Card>
+
                 <Card>
                   <h3 className="font-semibold text-[color:var(--vandyke)]">
                     Comentarios / Observaciones

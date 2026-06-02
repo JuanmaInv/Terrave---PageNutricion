@@ -121,8 +121,7 @@ export default function Index() {
                   Medallon de Lenteja Saludable
                 </h1>
                 <p className="hero-copy mt-4 max-w-xl text-base leading-relaxed text-[oklch(0.955_0.022_84)]/90 sm:text-lg">
-                  Una propuesta nutritiva y sustentable desarrollada a base de
-                  lentejas, avena y vegetales.
+                  El placer de comer con conciencia.
                 </p>
                 <div className="hero-cta mt-7 flex flex-wrap gap-3">
                   <Link

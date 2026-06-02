@@ -57,7 +57,7 @@ export function Navbar() {
             <TerraveMark className="h-5 w-5" strokeWidth={2.5} />
           </span>
           <span className="min-w-0 leading-tight">
-            <span className="block font-serif text-lg font-semibold tracking-tight">TERRAVE</span>
+            <span className="block font-serif text-lg font-semibold tracking-tight">TERRAVÉ</span>
             <span className={`block truncate text-[10px] font-medium uppercase tracking-[0.18em] opacity-70 ${isAdmin ? "" : "hidden"}`}>
               {isAdmin ? "Panel administrativo" : ""}
             </span>
@@ -122,7 +122,7 @@ export function Footer() {
         <span className="grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-white/5 text-[color:var(--cream)]">
           <TerraveMark className="h-6 w-6" strokeWidth={2.4} />
         </span>
-        <p className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">TERRAVE</p>
+        <p className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">TERRAVÉ</p>
       </div>
     </footer>
   );

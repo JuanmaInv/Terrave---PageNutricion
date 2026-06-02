@@ -4,7 +4,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "TERRAVE",
+  title: "TERRAVÉ",
   description: "Evaluacion sensorial de medallones de lenteja",
 };
 

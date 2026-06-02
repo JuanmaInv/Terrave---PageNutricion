@@ -59,7 +59,7 @@
 
 :root {
   --radius: 0.875rem;
-  /* TERRAVE palette */
+  /* TERRAVÉ palette */
   --vandyke: oklch(0.367 0.062 39);       /* #65382B */
   --moss: oklch(0.605 0.105 110);          /* #898C32 */
   --pumpkin: oklch(0.694 0.196 47);        /* #FF6D0E */
@@ -185,7 +185,7 @@
   }
 }
 
-/* Slider styling for TERRAVE survey */
+/* Slider styling for TERRAVÉ survey */
 .nutri-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -217,7 +217,7 @@
   cursor: pointer;
 }
 
-/* Smooth animations for TERRAVE index */
+/* Smooth animations for TERRAVÉ index */
 @keyframes float-soft {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }

@@ -33,7 +33,7 @@ function AdminGate() {
         <div className="flex min-h-screen items-center justify-center bg-[color:var(--background)] px-4">
           <div className="w-full max-w-md">
             <div className="mb-6 text-center">
-              <h1 className="font-serif text-2xl font-semibold text-foreground">TERRAVE · Panel admin</h1>
+              <h1 className="font-serif text-2xl font-semibold text-foreground">TERRAVÉ · Panel admin</h1>
               <p className="mt-1 text-sm text-muted-foreground">Iniciá sesión para acceder a las estadísticas.</p>
             </div>
             <SignIn
@@ -95,7 +95,7 @@ function AdminAuthorized() {
         <Navbar />
         <main className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-6 py-20">
           <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
-            <h2 className="font-serif text-2xl font-semibold text-foreground">Esta sección es solo para el equipo TERRAVE</h2>
+            <h2 className="font-serif text-2xl font-semibold text-foreground">Esta sección es solo para el equipo TERRAVÉ</h2>
             <p className="mt-3 text-sm text-muted-foreground">
               Tu cuenta no tiene permisos para visualizar el panel de estadísticas.
               Si sos parte del equipo y necesitás acceso, contactá al administrador del proyecto.
@@ -246,7 +246,7 @@ function AdminPage() {
         />
 
         <p className="mt-8 text-center text-xs text-muted-foreground sm:text-right">
-          TERRAVE · Proyecto integrador ISI x Nutrición
+          TERRAVÉ · Proyecto integrador ISI x Nutrición
         </p>
       </main>
       <Footer />

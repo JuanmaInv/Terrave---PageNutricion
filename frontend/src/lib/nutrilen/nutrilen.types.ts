@@ -1,5 +1,5 @@
 /**
- * Domain types and configuration constants for TERRAVE surveys.
+ * Domain types and configuration constants for TERRAVÉ surveys.
  * Pattern: SRP — only types and read-only config live here.
  */
 

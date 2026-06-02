@@ -204,7 +204,7 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
     sh.set_column("F:F", 2)
     sh.set_column("G:N", 16)
 
-    sh.write("A1", "Informe de Resultados - TERRAVE", title_fmt)
+    sh.write("A1", "Informe de Resultados - TERRAVÉ", title_fmt)
     generated = payload.get("generatedAt") or datetime.now().isoformat()
     sh.write("A2", f"Fecha de emision: {str(generated).replace('T', ' ')[:19]}", subtitle_fmt)
 

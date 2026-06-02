@@ -118,7 +118,7 @@ export class PdfReportExporter implements ReportExporter {
     doc.setTextColor(...INK);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(24);
-    doc.text("Informe de Resultados - TERRAVE", MARGIN, 52);
+    doc.text("Informe de Resultados - TERRAVÉ", MARGIN, 52);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(...MUTED);
@@ -290,7 +290,7 @@ export class PdfReportExporter implements ReportExporter {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(...INK);
-      doc.text("TERRAVE - Informe de Resultados", MARGIN, 19);
+      doc.text("TERRAVÉ - Informe de Resultados", MARGIN, 19);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...MUTED);
       doc.text(`Emitido: ${new Date().toLocaleDateString("es-AR")}`, PAGE_W - MARGIN - 100, 19);

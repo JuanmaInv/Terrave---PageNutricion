@@ -1,5 +1,5 @@
 -- ===========================================================================
--- ESQUEMA DE BASE DE DATOS - TERRAVE
+-- ESQUEMA DE BASE DE DATOS - TERRAVÉ
 -- ===========================================================================
 
 -- 1. Tabla de Usuarios (Administración de Roles)

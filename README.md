@@ -1,4 +1,4 @@
-# TERRAVE
+# TERRAVÉ
 
 Plataforma web para evaluación sensorial de medallones de lenteja.
 Integrador entre Nutricion e Ingenieria en Sistemas De Informacion.

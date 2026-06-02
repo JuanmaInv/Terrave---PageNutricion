@@ -21,28 +21,34 @@ import { Navbar, Footer } from "@/components/nutrilen/Navbar";
 
 const nutrients = [
   {
-    icon: Beef,
-    label: "Proteínas",
-    value: "Aporte proteico vegetal",
+    icon: Flame,
+    label: "Calorías",
+    value: "160 - 180 kcal",
     color: "var(--moss)",
   },
   {
     icon: Wheat,
-    label: "Fibra",
-    value: "Fuente de fibra alimentaria",
+    label: "Carbohidratos",
+    value: "20g - 24g",
     color: "var(--orange-yellow)",
   },
   {
-    icon: Flame,
-    label: "Energía",
-    value: "Valor energético equilibrado",
+    icon: Beef,
+    label: "Proteínas",
+    value: "8g - 11g",
     color: "var(--pumpkin)",
   },
   {
     icon: Droplet,
-    label: "Grasas",
-    value: "Bajo contenido lipídico",
+    label: "Grasas totales",
+    value: "5g - 7g",
     color: "var(--vandyke)",
+  },
+  {
+    icon: Leaf,
+    label: "Fibra alimentaria",
+    value: "6g - 8g",
+    color: "var(--moss)",
   },
 ];
 
@@ -184,9 +190,9 @@ export default function Index() {
           Información nutricional
         </h2>
         <p className="mt-2 text-sm text-muted-foreground animate-reveal-up dark:text-base" style={{ animationDelay: "0.1s" }}>
-          Valores aproximados por porción de 100 g.
+          Valores aproximados por 100 gramos.
         </p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger-children">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 stagger-children">
           {nutrients.map((n) => (
             <div
               key={n.label}
@@ -247,4 +253,3 @@ export default function Index() {
     </div>
   );
 }
-

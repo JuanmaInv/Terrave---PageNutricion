@@ -4,7 +4,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
-import { Request } from "express";
 import { AdminService } from "../admin.service";
 
 /**
@@ -27,8 +26,13 @@ export class AdminGuard implements CanActivate {
   constructor(private readonly adminService: AdminService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-    const authorization = request.headers["authorization"];
+    const request = context.switchToHttp().getRequest<{
+      headers?: Record<string, string | string[] | undefined>;
+    }>();
+    const rawAuthorization = request.headers?.authorization;
+    const authorization = Array.isArray(rawAuthorization)
+      ? rawAuthorization[0]
+      : rawAuthorization;
 
     try {
       const token = this.adminService.getTokenFromAuthorization(authorization);

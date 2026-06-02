@@ -1,5 +1,5 @@
 /**
- * Domain types and configuration constants for NutriLen surveys.
+ * Domain types and configuration constants for TERRAVE surveys.
  * Pattern: SRP — only types and read-only config live here.
  */
 

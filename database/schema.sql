@@ -1,5 +1,5 @@
 -- ===========================================================================
--- ESQUEMA DE BASE DE DATOS - NUTRILEN
+-- ESQUEMA DE BASE DE DATOS - TERRAVE
 -- ===========================================================================
 
 -- 1. Tabla de Usuarios (Administración de Roles)

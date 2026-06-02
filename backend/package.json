@@ -2,7 +2,7 @@
   "name": "nutrilen-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Backend API for NutriLen (NestJS)",
+  "description": "Backend API for TERRAVE (NestJS)",
   "scripts": {
     "dev": "nest start --watch",
     "start": "node dist/main.js",

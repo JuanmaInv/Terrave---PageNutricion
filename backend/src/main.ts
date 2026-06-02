@@ -23,7 +23,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);
-  console.log(`TERRAVE backend listening on http://localhost:${port}/api/v1`);
+  console.log(`TERRAVÉ backend listening on http://localhost:${port}/api/v1`);
 }
 
 bootstrap();

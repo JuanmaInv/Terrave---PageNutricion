@@ -25,7 +25,7 @@ export function PageLoader({ show }: { show: boolean }) {
           </span>
         </div>
         <p className="font-serif text-xl font-semibold tracking-[0.32em] text-[color:var(--vandyke)]">
-          TERRAVE
+          TERRAVÉ
         </p>
         <div className="flex gap-1.5">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--moss)]" style={{ animationDelay: "0ms" }} />

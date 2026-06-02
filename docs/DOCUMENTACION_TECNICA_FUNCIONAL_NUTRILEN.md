@@ -1,7 +1,7 @@
-# TERRAVE - Documentacion Tecnica y Funcional (Version Ampliada)
+# TERRAVÉ - Documentacion Tecnica y Funcional (Version Ampliada)
 
 ## 1. Introduccion
-Este documento consolida la documentacion tecnica y funcional de TERRAVE con trazabilidad sobre:
+Este documento consolida la documentacion tecnica y funcional de TERRAVÉ con trazabilidad sobre:
 - Codigo fuente (`frontend`, `backend`, `database`).
 - Documentacion Markdown previa en `docs`.
 - PDF del proyecto, incluyendo matriz de RNF ISO 25010 (21 requerimientos).
@@ -25,7 +25,7 @@ Este documento consolida la documentacion tecnica y funcional de TERRAVE con tra
 ## 5. Desarrollo
 
 ### 5.1 Resumen
-- Nombre: TERRAVE.
+- Nombre: TERRAVÉ.
 - Problema que resuelve: captura estructurada de encuestas, analisis estadistico y exportabilidad para toma de decisiones.
 - Alcance implementado:
   1. Registro de encuesta (`POST /api/v1/encuestas`).
@@ -57,27 +57,27 @@ Modulos backend:
 - Patrones de diseno aplicados:
   - Repository:
     - Concepto: organiza todo lo relacionado con base de datos en un solo lugar.
-    - Aplicacion en TERRAVE: en `encuesta` y `estadistica` se separo la consulta a datos de la logica general.
+    - Aplicacion en TERRAVÉ: en `encuesta` y `estadistica` se separo la consulta a datos de la logica general.
     - Motivo de uso: queriamos que los cambios en base de datos no obliguen a tocar todo el sistema.
   - Strategy:
     - Concepto: permite tener varias formas de filtrar y elegir la que corresponde segun el caso.
-    - Aplicacion en TERRAVE: filtros de estadisticas por `diet`, `sex` y rango de fechas.
+    - Aplicacion en TERRAVÉ: filtros de estadisticas por `diet`, `sex` y rango de fechas.
     - Motivo de uso: asi podemos agregar filtros nuevos sin romper lo que ya funciona.
   - Decorator + Guard (NestJS):
     - Concepto: agrega una verificacion antes de entrar a ciertas rutas.
-    - Aplicacion en TERRAVE: `@UseGuards(AdminGuard)` en rutas de administrador.
+    - Aplicacion en TERRAVÉ: `@UseGuards(AdminGuard)` en rutas de administrador.
     - Motivo de uso: dejar bien claro que no cualquiera puede ver estadisticas internas.
   - Factory:
     - Concepto: centraliza la eleccion de que herramienta usar segun el tipo de salida.
-    - Aplicacion en TERRAVE: para exportar, el sistema decide si usa generador de PDF o de Excel.
+    - Aplicacion en TERRAVÉ: para exportar, el sistema decide si usa generador de PDF o de Excel.
     - Motivo de uso: en el futuro se pueden sumar mas formatos sin rehacer todo.
   - Facade:
     - Concepto: ofrece una puerta unica para acceder a funciones que estaban dispersas.
-    - Aplicacion en TERRAVE: `frontend/src/lib/api.ts` concentra llamadas HTTP y acceso a utilidades.
+    - Aplicacion en TERRAVÉ: `frontend/src/lib/api.ts` concentra llamadas HTTP y acceso a utilidades.
     - Motivo de uso: ordenar el codigo y facilitar el trabajo cuando se incorporan cambios.
   - Observer (reactividad con hooks):
     - Concepto: cuando cambian los datos, la pantalla se actualiza sola.
-    - Aplicacion en TERRAVE: hooks de filtros/estadisticas y actualizacion del dashboard en tiempo real.
+    - Aplicacion en TERRAVÉ: hooks de filtros/estadisticas y actualizacion del dashboard en tiempo real.
     - Motivo de uso: mejorar la experiencia y evitar actualizaciones manuales en cada componente.
 
 Ventajas y desventajas de los patrones elegidos:
@@ -242,7 +242,7 @@ Evidencia: encuesta con pasos y botones de navegacion claros.
 Evidencia: no hay reporte Lighthouse versionado.
 15. RNF-15 Responsive (mobile/tablet/desktop): **Parcial**.
 Evidencia: clases responsivas; sin suite de pruebas cross-device formal.
-16. RNF-16 Consistencia visual/paleta TERRAVE: **Cumple**.
+16. RNF-16 Consistencia visual/paleta TERRAVÉ: **Cumple**.
 Evidencia: variables y lineamiento visual consistentes entre vistas principales.
 17. RNF-17 Compatibilidad Chrome/Edge/Firefox: **No cumple** (evidencia).
 Evidencia: no hay matriz de pruebas por navegador.
@@ -450,7 +450,7 @@ En esta seccion se documentan los 21 RNF del proyecto con la estructura solicita
 | RNF-13 | Usabilidad de la encuesta | Usabilidad, accesibilidad y experiencia de usuario | La encuesta debera poder completarse de forma intuitiva mediante flujo multi-step con navegacion clara y consistente. | Mejor usabilidad mejora tasa de finalizacion. | Flujo confuso / abandono alto / simplificar etiquetas y orden de campos. | Feedback insuficiente / errores reiterados / validaciones contextuales y mensajes claros. |
 | RNF-14 | Accesibilidad visual | Usabilidad, accesibilidad y experiencia de usuario | La interfaz debera alcanzar >=70/100 en Lighthouse Accessibility en Home, Encuesta y Dashboard. | Garantiza inclusion minima y calidad visible. | Bajo contraste / exclusion de usuarios / ajuste de paleta y chequeo WCAG. | Falta de evidencias formales / rechazo en evaluacion / auditorias versionadas por release. |
 | RNF-15 | Diseno responsive | Usabilidad, accesibilidad y experiencia de usuario | La aplicacion debera adaptarse a movil, tablet y desktop sin desbordes ni perdida funcional en casos criticos. | La recoleccion ocurre en dispositivos heterogeneos. | Ruptura de layout en movil / imposibilidad de encuestar / pruebas por breakpoints objetivo. | Dashboard ilegible en pantallas chicas / decisiones erradas / reorganizacion adaptativa de graficos. |
-| RNF-16 | Consistencia visual | Usabilidad, accesibilidad y experiencia de usuario | La interfaz debera mantener paleta oficial TERRAVE y coherencia visual entre Home, Encuesta y Administrador. | Refuerza identidad y reduce carga cognitiva. | Inconsistencias de UI / percepcion no profesional / uso obligatorio de tokens de diseno. | Colores hardcodeados dispersos / mantenimiento dificil / centralizar tema en variables globales. |
+| RNF-16 | Consistencia visual | Usabilidad, accesibilidad y experiencia de usuario | La interfaz debera mantener paleta oficial TERRAVÉ y coherencia visual entre Home, Encuesta y Administrador. | Refuerza identidad y reduce carga cognitiva. | Inconsistencias de UI / percepcion no profesional / uso obligatorio de tokens de diseno. | Colores hardcodeados dispersos / mantenimiento dificil / centralizar tema en variables globales. |
 | RNF-17 | Compatibilidad con navegadores | Compatibilidad, interoperabilidad e integracion | El sistema debera funcionar en ultimas versiones estables de Chrome, Edge y Firefox sin defectos bloqueantes. | Asegura acceso amplio sin dependencia de un navegador unico. | Fallas en navegador especifico / exclusion de usuarios / matriz de pruebas cross-browser. | APIs no soportadas / errores en cliente / polyfills y lint de compatibilidad. |
 | RNF-18 | Integracion frontend-backend-BD | Compatibilidad, interoperabilidad e integracion | Frontend, backend y base de datos deberan intercambiar informacion de forma consistente segun contratos de API y DTO definidos. | Evita inconsistencias entre captura y analitica. | Campos desalineados entre capas / errores de guardado / contratos versionados y validacion estricta. | Cambios no coordinados / roturas en produccion / pruebas E2E y de contrato por CI. |
 | RNF-19 | Mantenibilidad del codigo | Mantenibilidad, modularidad y deuda tecnica | El codigo debera organizarse en modulos, componentes y servicios reutilizables para facilitar mantenimiento y evolucion. | Reduce deuda tecnica y costo de cambios futuros. | Codigo acoplado / alta complejidad / limites de complejidad y refactor continuo. | Duplicacion excesiva / errores repetidos / extraccion de utilidades compartidas. |

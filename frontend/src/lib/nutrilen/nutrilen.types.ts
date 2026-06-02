@@ -55,5 +55,6 @@ export interface SurveyResponse {
   liked: "si" | "no";
   consumeAgain: "si" | "no" | "tal_vez";
   recommend: number; // 1..5
+  willingnessToPay?: string;
   affectiveComments?: string;
 }

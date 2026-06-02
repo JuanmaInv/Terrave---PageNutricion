@@ -185,12 +185,16 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
 
     descriptive_rows: list[str] = []
     affective_rows: list[str] = []
+    pricing_rows: list[str] = []
     for idx, s in enumerate(surveys, start=1):
         prefix = f"Participante {idx}: "
         d = str(s.get("descriptiveComments") or "").strip()
+        p = str(s.get("willingnessToPay") or "").strip()
         a = str(s.get("affectiveComments") or "").strip()
         if d:
             descriptive_rows.append(prefix + d)
+        if p:
+            pricing_rows.append(prefix + p)
         if a:
             affective_rows.append(prefix + a)
 
@@ -412,6 +416,17 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
             row += 1
     else:
         sh_comments.merge_range(row - 1, 0, row - 1, 1, "Sin observaciones afectivas para los filtros seleccionados.", text_fmt)
+        row += 1
+
+    row += 1
+    sh_comments.merge_range(row - 1, 0, row - 1, 1, "DISPOSICION A PAGAR (EN PESOS)", section_fmt)
+    row += 2
+    if pricing_rows:
+        for line_text in pricing_rows:
+            sh_comments.merge_range(row - 1, 0, row - 1, 1, line_text, text_wrap_fmt)
+            row += 1
+    else:
+        sh_comments.merge_range(row - 1, 0, row - 1, 1, "Sin respuestas de precio para los filtros seleccionados.", text_fmt)
 
     # Sheet 6: Detalle de encuestas
     sh_detail = wb.add_worksheet("Detalle Encuestas")
@@ -421,7 +436,7 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
     sh_detail.set_column("C:D", 14)
     sh_detail.set_column("E:J", 10)
     sh_detail.set_column("K:L", 18)
-    sh_detail.set_column("M:N", 38)
+    sh_detail.set_column("M:O", 38)
 
     headers = [
         "#",
@@ -432,6 +447,7 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
         "Liked",
         "Recompra",
         "Recom.",
+        "Cuanto pagaria",
         "Color",
         "Aroma",
         "Firmeza",
@@ -454,14 +470,15 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
         sh_detail.write(i, 5, str(s.get("liked") or ""), text_fmt)
         sh_detail.write(i, 6, str(s.get("consumeAgain") or ""), text_fmt)
         sh_detail.write(i, 7, safe_num(s.get("recommend", 0)), num_fmt)
-        sh_detail.write(i, 8, safe_num(attrs.get("color", 0)), num_fmt)
-        sh_detail.write(i, 9, safe_num(attrs.get("aroma", 0)), num_fmt)
-        sh_detail.write(i, 10, safe_num(attrs.get("firmeza", 0)), num_fmt)
-        sh_detail.write(i, 11, safe_num(attrs.get("untuosidad", 0)), num_fmt)
-        sh_detail.write(i, 12, safe_num(attrs.get("sabor_tostado", 0)), num_fmt)
-        sh_detail.write(i, 13, safe_num(attrs.get("persistencia", 0)), num_fmt)
-        sh_detail.write(i, 14, str(s.get("descriptiveComments") or ""), text_wrap_fmt)
-        sh_detail.write(i, 15, str(s.get("affectiveComments") or ""), text_wrap_fmt)
+        sh_detail.write(i, 8, str(s.get("willingnessToPay") or ""), text_wrap_fmt)
+        sh_detail.write(i, 9, safe_num(attrs.get("color", 0)), num_fmt)
+        sh_detail.write(i, 10, safe_num(attrs.get("aroma", 0)), num_fmt)
+        sh_detail.write(i, 11, safe_num(attrs.get("firmeza", 0)), num_fmt)
+        sh_detail.write(i, 12, safe_num(attrs.get("untuosidad", 0)), num_fmt)
+        sh_detail.write(i, 13, safe_num(attrs.get("sabor_tostado", 0)), num_fmt)
+        sh_detail.write(i, 14, safe_num(attrs.get("persistencia", 0)), num_fmt)
+        sh_detail.write(i, 15, str(s.get("descriptiveComments") or ""), text_wrap_fmt)
+        sh_detail.write(i, 16, str(s.get("affectiveComments") or ""), text_wrap_fmt)
 
     sh_detail.autofilter(0, 0, max(1, total), len(headers) - 1)
 

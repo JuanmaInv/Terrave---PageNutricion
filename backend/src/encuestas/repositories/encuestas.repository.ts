@@ -25,9 +25,9 @@ export class EncuestasRepository implements IEncuestasRepository {
         id, fecha, sexo, dieta,
         color, aroma, firmeza, untuosidad, sabor_tostado, persistencia,
         aceptacion, liked, consume_again, recommend,
-        descriptive_comments, affective_comments
+        descriptive_comments, willingness_to_pay, affective_comments
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17
       )
       RETURNING id, fecha
     `;
@@ -48,6 +48,7 @@ export class EncuestasRepository implements IEncuestasRepository {
       dto.consumeAgain,
       dto.recommend,
       dto.descriptiveComments ?? null,
+      dto.willingnessToPay ?? null,
       dto.affectiveComments ?? null,
     ];
 

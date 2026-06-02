@@ -24,6 +24,7 @@ type SurveyRow = {
   consume_again: string;
   recommend: number;
   descriptive_comments: string | null;
+  willingness_to_pay: string | null;
   affective_comments: string | null;
 };
 
@@ -59,7 +60,7 @@ export class EstadisticasRepository implements IEstadisticasRepository {
       SELECT
         id, fecha, sexo, dieta, color, aroma, firmeza, untuosidad,
         sabor_tostado, persistencia, aceptacion, liked, consume_again,
-        recommend, descriptive_comments, affective_comments
+        recommend, descriptive_comments, willingness_to_pay, affective_comments
       FROM public.encuestas
       ${where}
       ORDER BY fecha DESC
@@ -89,6 +90,7 @@ export class EstadisticasRepository implements IEstadisticasRepository {
       liked: row.liked,
       consumeAgain: row.consume_again,
       recommend: row.recommend,
+      willingnessToPay: row.willingness_to_pay ?? "",
       affectiveComments: row.affective_comments ?? "",
     };
   }

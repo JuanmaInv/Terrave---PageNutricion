@@ -34,6 +34,14 @@ const AFF_SAMPLES = [
   "Le falta un poco de condimento.",
 ];
 
+const PRICE_SAMPLES = [
+  "$3.500",
+  "$4.000",
+  "$4.500",
+  "Entre $4.000 y $5.000",
+  "Hasta $5.500 si mantiene esta calidad",
+];
+
 const DIET_WEIGHTS: Diet[] = [
   ...Array(14).fill("omnivoro"),
   ...Array(7).fill("ovo_lacto"),
@@ -90,6 +98,7 @@ function buildSeedEntry(index: number, now: number): SurveyResponse {
     liked,
     consumeAgain,
     recommend: Math.max(1, Math.min(5, acceptance + randInt(-1, 1))),
+    willingnessToPay: Math.random() < 0.65 ? rand(PRICE_SAMPLES) : undefined,
     affectiveComments: Math.random() < 0.55 ? rand(AFF_SAMPLES) : undefined,
   };
 }

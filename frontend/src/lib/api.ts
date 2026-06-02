@@ -202,7 +202,7 @@ export function encuestasACSV(surveys: SurveyResponse[]): string {
   const headers = [
     "id", "fecha", "sexo", "dieta", "color", "aroma", "firmeza",
     "untuosidad", "sabor_tostado", "persistencia", "comentarios_descriptivos",
-    "aceptacion", "gusto", "consumiria_nuevamente", "recomendacion", "comentarios_afectivos",
+    "aceptacion", "gusto", "consumiria_nuevamente", "recomendacion", "cuanto_pagaria_en_pesos", "comentarios_afectivos",
   ];
   const escape = (v: unknown) => {
     const s = v == null ? "" : String(v);
@@ -215,6 +215,7 @@ export function encuestasACSV(surveys: SurveyResponse[]): string {
       s.attrs.sabor_tostado, s.attrs.persistencia,
       s.descriptiveComments ?? "",
       s.acceptance, s.liked, s.consumeAgain, s.recommend,
+      s.willingnessToPay ?? "",
       s.affectiveComments ?? "",
     ]
       .map(escape)

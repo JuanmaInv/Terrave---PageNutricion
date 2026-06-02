@@ -96,5 +96,9 @@ export class CreateEncuestaDto {
 
   @IsOptional()
   @IsString()
+  willingnessToPay?: string;
+
+  @IsOptional()
+  @IsString()
   affectiveComments?: string;
 }

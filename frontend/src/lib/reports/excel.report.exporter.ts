@@ -47,6 +47,7 @@ export class ExcelReportExporter implements ReportExporter {
       gusto: s.liked,
       consumiria_nuevamente: s.consumeAgain,
       recomendacion: s.recommend,
+      cuanto_pagaria_en_pesos: s.willingnessToPay ?? "",
       comentarios_afectivos: s.affectiveComments ?? "",
     }));
 
@@ -54,9 +55,9 @@ export class ExcelReportExporter implements ReportExporter {
     detailSheet["!cols"] = [
       { wch: 12 }, { wch: 19 }, { wch: 12 }, { wch: 18 },
       { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
-      { wch: 36 }, { wch: 10 }, { wch: 9 }, { wch: 16 }, { wch: 12 }, { wch: 36 },
+      { wch: 36 }, { wch: 10 }, { wch: 9 }, { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 36 },
     ];
-    detailSheet["!autofilter"] = { ref: "A1:P1" };
+    detailSheet["!autofilter"] = { ref: "A1:Q1" };
     XLSX.utils.book_append_sheet(workbook, detailSheet, "Detalle_Encuestas");
 
     const byDiet = new Map<string, number>();

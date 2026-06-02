@@ -16,5 +16,6 @@ export interface SurveyResponseDto {
   liked: string;
   consumeAgain: string;
   recommend: number;
+  willingnessToPay: string;
   affectiveComments: string;
 }

@@ -12,7 +12,7 @@ const HEAD_SECONDARY: [number, number, number] = [51, 65, 85];
 
 export class PdfReportExporter implements ReportExporter {
   filename(): string {
-    return `nutrilen-dashboard-${Date.now()}.pdf`;
+    return `terrave-dashboard-${Date.now()}.pdf`;
   }
 
   async export(surveys: SurveyResponse[], context?: ReportContext): Promise<Blob> {
@@ -118,7 +118,7 @@ export class PdfReportExporter implements ReportExporter {
     doc.setTextColor(...INK);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(24);
-    doc.text("Informe de Resultados - NutriLen", MARGIN, 52);
+    doc.text("Informe de Resultados - TERRAVE", MARGIN, 52);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(...MUTED);
@@ -290,7 +290,7 @@ export class PdfReportExporter implements ReportExporter {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(...INK);
-      doc.text("NutriLen - Informe de Resultados", MARGIN, 19);
+      doc.text("TERRAVE - Informe de Resultados", MARGIN, 19);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...MUTED);
       doc.text(`Emitido: ${new Date().toLocaleDateString("es-AR")}`, PAGE_W - MARGIN - 100, 19);

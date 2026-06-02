@@ -1,4 +1,4 @@
-# Plan Backend V1 (NutriLen)
+# Plan Backend V1 (TERRAVE)
 
 ## 1. Estado actual validado
 - Frontend funcional: encuesta, panel admin, filtros y exportes.

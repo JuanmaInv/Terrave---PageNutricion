@@ -228,6 +228,7 @@ function SliderCard({
 export default function EncuestaPage() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { show: showLoader, run: runWithLoader } = useNavLoader(1200);
 
   // Step 1
@@ -282,6 +283,7 @@ export default function EncuestaPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!sex || !diet) {
       toast.error("Faltan datos generales.");
       setStep(1);
@@ -304,6 +306,7 @@ export default function EncuestaPage() {
       recommend,
       affectiveComments,
     };
+    setIsSubmitting(true);
     runWithLoader(async () => {
       try {
         await enviarEncuesta(survey);
@@ -314,6 +317,8 @@ export default function EncuestaPage() {
         const detail =
           error instanceof Error ? error.message : "Error desconocido al enviar la encuesta.";
         toast.error(`No se pudo enviar la encuesta. ${detail}`);
+      } finally {
+        setIsSubmitting(false);
       }
     });
   }
@@ -639,7 +644,7 @@ export default function EncuestaPage() {
               <button
                 type="button"
                 onClick={prev}
-                disabled={step === 1}
+                disabled={step === 1 || isSubmitting}
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-5 py-3 text-sm font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -657,10 +662,20 @@ export default function EncuestaPage() {
               ) : (
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--moss)] px-7 py-3 text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)]"
+                  disabled={isSubmitting}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--moss)] px-7 py-3 text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <Send className="h-4 w-4" />
-                  Enviar evaluación
+                  {isSubmitting ? (
+                    <>
+                      <Clock className="h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Enviar evaluación
+                    </>
+                  )}
                 </button>
               )}
             </div>

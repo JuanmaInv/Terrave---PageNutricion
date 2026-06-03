@@ -40,15 +40,19 @@ export function PageLoader({ show }: { show: boolean }) {
 
 export function useNavLoader(duration = 1200) {
   const [show, setShow] = useState(false);
+  // In test/dev environments we may want faster navigation for E2E stability.
+  // Use the existing public env flag used by Playwright webServer to allow local fallback.
+  const effectiveDuration = process.env.NEXT_PUBLIC_DEV_LOCAL_FALLBACK === "true" ? 0 : duration;
+
   const run = useCallback(
     (action?: () => void) => {
       setShow(true);
       window.setTimeout(() => {
         action?.();
         setShow(false);
-      }, duration);
+      }, effectiveDuration);
     },
-    [duration],
+    [effectiveDuration],
   );
   return { show, run, setShow };
 }

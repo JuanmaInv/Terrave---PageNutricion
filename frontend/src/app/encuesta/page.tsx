@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navbar, Footer } from "@/components/nutrilen/Navbar";
 import { PageLoader, useNavLoader } from "@/components/nutrilen/PageLoader";
 import {
@@ -35,8 +35,20 @@ import {
   type Sex,
   type SurveyResponse,
 } from "@/lib/nutrilen";
-import { enviarEncuesta } from "@/lib/api";
+import {
+  actualizarSesionEncuesta,
+  crearSesionEncuesta,
+  enviarEncuesta,
+  type SurveySessionDraft,
+} from "@/lib/api";
+import { useRedirectAdminToDashboard } from "@/hooks/useRedirectAdminToDashboard";
+import {
+  sanitizeWillingnessToPay,
+  validateSurveyStepOne,
+  validateSurveySubmission,
+} from "@/lib/survey/survey-validation";
 
+const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 const ATTR_ICONS: Record<AttrKey, React.ComponentType<{ className?: string }>> = {
   color: Palette,
   aroma: Wind,
@@ -48,19 +60,29 @@ const ATTR_ICONS: Record<AttrKey, React.ComponentType<{ className?: string }>> =
 
 const STEPS = [
   { id: 1, title: "Datos generales", icon: User },
-  { id: 2, title: "Evaluación descriptiva", icon: Salad },
-  { id: 3, title: "Evaluación afectiva", icon: Sparkles },
+  { id: 2, title: "Evaluacion descriptiva", icon: Salad },
+  { id: 3, title: "Evaluacion afectiva", icon: Sparkles },
 ] as const;
+
+const SURVEY_SESSION_STORAGE_KEY = "nutrilen.activeSurveySessionId";
+const SURVEY_CLIENT_SESSION_KEY = "nutrilen.clientSurveySessionKey";
+const AUTOSAVE_DELAY_MS = 800;
+const CAN_TRACK_PROGRESS = Boolean(process.env.NEXT_PUBLIC_API_URL?.trim());
 
 function StepIndicator({ step }: { step: number }) {
   return (
-    <div className="mb-8">
+    <div className="mb-8" aria-label="Progreso de la encuesta" role="list">
       <div className="flex items-center justify-between gap-2">
         {STEPS.map((s, i) => {
           const done = step > s.id;
           const active = step === s.id;
           return (
-            <div key={s.id} className="flex flex-1 items-center gap-2">
+            <div
+              key={s.id}
+              className="flex flex-1 items-center gap-2"
+              role="listitem"
+              aria-current={active ? "step" : undefined}
+            >
               <div className="flex flex-col items-center gap-1.5">
                 <div
                   className={`grid h-9 w-9 place-items-center rounded-full border-2 text-sm font-semibold transition-all ${
@@ -127,6 +149,7 @@ function ChoiceCard<T extends string>({
             key={o.id}
             type="button"
             onClick={() => onChange(o.id)}
+            aria-pressed={selected}
             className="flex items-start gap-3 rounded-2xl border bg-background/60 p-4 text-left transition hover:-translate-y-0.5"
             style={{
               borderColor: selected
@@ -226,9 +249,55 @@ function SliderCard({
 }
 
 export default function EncuestaPage() {
+  if (TEST_AUTH_MODE) {
+    return <EncuestaPageContent />;
+  }
+
+  return <EncuestaPageWithRedirect />;
+}
+
+function EncuestaPageWithRedirect() {
+  const { isCheckingRedirect } = useRedirectAdminToDashboard();
+
+  if (isCheckingRedirect) {
+    return (
+      <div className="flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-hidden bg-background text-foreground font-sans">
+        <Navbar />
+        <PageLoader show />
+      </div>
+    );
+  }
+
+  return <EncuestaPageContent />;
+}
+
+function EncuestaPageContent() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncingSession, setIsSyncingSession] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(() => {
+    if (!CAN_TRACK_PROGRESS || typeof window === "undefined") {
+      return null;
+    }
+
+    return window.localStorage.getItem(SURVEY_SESSION_STORAGE_KEY);
+  });
+  const [clientSessionKey, setClientSessionKey] = useState(() => {
+    if (!CAN_TRACK_PROGRESS || typeof window === "undefined") {
+      return "";
+    }
+
+    let localKey = window.localStorage.getItem(SURVEY_CLIENT_SESSION_KEY);
+    if (!localKey) {
+      localKey = crypto.randomUUID();
+      window.localStorage.setItem(SURVEY_CLIENT_SESSION_KEY, localKey);
+    }
+
+    return localKey;
+  });
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionCreateInFlightRef = useRef(false);
   const { show: showLoader, run: runWithLoader } = useNavLoader(1200);
 
   // Step 1
@@ -263,10 +332,93 @@ export default function EncuestaPage() {
   const [willingnessToPay, setWillingnessToPay] = useState("");
   const [affectiveComments, setAffectiveComments] = useState("");
 
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+
+  const hasStartedSurvey =
+    step > 1 ||
+    sex !== null ||
+    diet !== null ||
+    descriptiveComments.trim().length > 0 ||
+    acceptance !== null ||
+    liked !== null ||
+    consumeAgain !== null ||
+    willingnessToPay.trim().length > 0 ||
+    affectiveComments.trim().length > 0;
+
+  const sessionDraft = useMemo<SurveySessionDraft>(
+    () => ({
+      clientSessionKey,
+      currentStep: step,
+      sex: sex ?? undefined,
+      diet: diet ?? undefined,
+      attrs: step > 1 ? attrs : undefined,
+      descriptiveComments: descriptiveComments || undefined,
+      acceptance: acceptance ?? undefined,
+      liked: liked ?? undefined,
+      consumeAgain: consumeAgain ?? undefined,
+      recommend: step === 3 ? recommend : undefined,
+      willingnessToPay: willingnessToPay || undefined,
+      affectiveComments: affectiveComments || undefined,
+    }),
+    [
+      acceptance,
+      affectiveComments,
+      clientSessionKey,
+      attrs,
+      descriptiveComments,
+      diet,
+      liked,
+      recommend,
+      sex,
+      step,
+      consumeAgain,
+      willingnessToPay,
+    ],
+  );
+
+  useEffect(() => {
+    if (!CAN_TRACK_PROGRESS || !clientSessionKey || !hasStartedSurvey || submitted) return;
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      if (sessionCreateInFlightRef.current) return;
+
+      setIsSyncingSession(true);
+      try {
+        const currentSessionId = sessionIdRef.current;
+
+        if (!currentSessionId) {
+          sessionCreateInFlightRef.current = true;
+          const created = await crearSesionEncuesta(sessionDraft);
+          if (cancelled) return;
+          sessionIdRef.current = created.id;
+          setSessionId(created.id);
+          window.localStorage.setItem(SURVEY_SESSION_STORAGE_KEY, created.id);
+          return;
+        }
+
+        await actualizarSesionEncuesta(currentSessionId, sessionDraft);
+      } catch (error) {
+        console.error("Survey session autosave failed:", error);
+      } finally {
+        sessionCreateInFlightRef.current = false;
+        setIsSyncingSession(false);
+      }
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [clientSessionKey, hasStartedSurvey, sessionDraft, submitted]);
+
   function next() {
     if (step === 1) {
-      if (!sex || !diet) {
-        toast.error("Completá sexo y tipo de dieta para continuar.");
+      const error = validateSurveyStepOne({ sex, diet });
+      if (error) {
+        toast.error(error);
         return;
       }
     }
@@ -285,25 +437,41 @@ export default function EncuestaPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isSubmitting) return;
-    if (!sex || !diet) {
-      toast.error("Faltan datos generales.");
-      setStep(1);
-      return;
-    }
-    if (acceptance === null || !liked || !consumeAgain) {
-      toast.error("Completá la evaluación afectiva.");
-      return;
-    }
-    const survey: SurveyResponse = {
-      id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      date: new Date().toISOString(),
+    const error = validateSurveySubmission({
       sex,
       diet,
       attrs,
-      descriptiveComments,
       acceptance,
       liked,
       consumeAgain,
+      recommend,
+      willingnessToPay,
+    });
+
+    if (error) {
+      toast.error(error);
+      if (error === "Faltan datos generales.") {
+        setStep(1);
+      }
+      return;
+    }
+    const selectedSex = sex as Sex;
+    const selectedDiet = diet as Diet;
+    const selectedAcceptance = acceptance as number;
+    const selectedLiked = liked as "si" | "no";
+    const selectedConsumeAgain = consumeAgain as "si" | "no" | "tal_vez";
+
+    const survey: SurveyResponse = {
+      id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      sessionId: sessionId ?? undefined,
+      date: new Date().toISOString(),
+      sex: selectedSex,
+      diet: selectedDiet,
+      attrs,
+      descriptiveComments,
+      acceptance: selectedAcceptance,
+      liked: selectedLiked,
+      consumeAgain: selectedConsumeAgain,
       recommend,
       willingnessToPay,
       affectiveComments,
@@ -312,6 +480,15 @@ export default function EncuestaPage() {
     runWithLoader(async () => {
       try {
         await enviarEncuesta(survey);
+        if (CAN_TRACK_PROGRESS) {
+          window.localStorage.removeItem(SURVEY_SESSION_STORAGE_KEY);
+          const nextClientSessionKey = crypto.randomUUID();
+          window.localStorage.setItem(SURVEY_CLIENT_SESSION_KEY, nextClientSessionKey);
+          setClientSessionKey(nextClientSessionKey);
+        }
+        sessionIdRef.current = null;
+        sessionCreateInFlightRef.current = false;
+        setSessionId(null);
         toast.success("Evaluación enviada correctamente");
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -327,13 +504,28 @@ export default function EncuestaPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background text-foreground font-sans">
+      <div className="flex min-h-screen flex-col bg-background text-foreground font-sans">
         <Navbar />
         <PageLoader show={showLoader} />
-        <main className="mx-auto flex max-w-2xl flex-col items-center px-4 py-20 text-center sm:px-6">
-          <div className="relative">
-            <div className="absolute inset-0 animate-ping rounded-full bg-[color:var(--moss)]/30" />
-            <div className="relative grid h-24 w-24 place-items-center rounded-full bg-[color:var(--moss)] text-white shadow-[var(--shadow-soft)]">
+        <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-4 py-20 text-center sm:px-6">
+          <div className="nutri-success-motion relative">
+            <div
+              className="nutri-success-pulse absolute inset-0 rounded-full bg-[color:var(--moss)]/28"
+              style={{ animation: "success-pulse 1.8s ease-in-out infinite" }}
+            />
+            <div
+              className="nutri-success-orbit absolute inset-0 -m-3 rounded-full opacity-55"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, var(--moss), var(--orange-yellow), var(--pumpkin), var(--moss))",
+                filter: "blur(10px)",
+                animation: "success-orbit 2.8s linear infinite",
+              }}
+            />
+            <div
+              className="nutri-success-breathe relative grid h-24 w-24 place-items-center rounded-full bg-[color:var(--moss)] text-white shadow-[var(--shadow-soft)]"
+              style={{ animation: "success-breathe 1.8s ease-in-out infinite" }}
+            >
               <CheckCircle2 className="h-12 w-12" strokeWidth={2.2} />
             </div>
           </div>
@@ -352,19 +544,39 @@ export default function EncuestaPage() {
             Volver al inicio
           </Link>
         </main>
-        <Footer />
+        <style>{`
+          @keyframes success-pulse {
+            0%, 100% { transform: scale(0.9); opacity: 0.2; }
+            50% { transform: scale(1.16); opacity: 0.38; }
+          }
+          @keyframes success-breathe {
+            0%, 100% { transform: scale(1); box-shadow: var(--shadow-soft); }
+            50% { transform: scale(1.06); box-shadow: 0 18px 36px -18px color-mix(in oklab, var(--moss) 58%, transparent); }
+          }
+          @keyframes success-orbit {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.04); }
+            100% { transform: rotate(360deg) scale(1); }
+          }
+        `}</style>
+        <div className="mt-auto">
+          <Footer />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <div className="flex min-h-screen flex-col bg-background text-foreground font-sans">
       <Navbar />
       <PageLoader show={showLoader} />
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-14">
+      <main id="main-content" className="mx-auto w-full max-w-3xl flex-1 px-3 py-8 sm:px-6 lg:py-14">
+        <div className="sr-only" aria-live="polite">
+          {isSyncingSession ? "Guardando avance de la encuesta." : "Avance de encuesta sincronizado."}
+        </div>
         <header className="text-center">
           <span className="inline-block rounded-full bg-[color:var(--orange-yellow)]/25 px-3 py-1 text-xs font-medium text-[color:var(--vandyke)]">
-            Evaluación sensorial · Paso {step} de 3
+            Evaluacion sensorial - Paso {step} de 3
           </span>
           <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight text-[color:var(--vandyke)] sm:text-4xl">
             {STEPS[step - 1].title}
@@ -445,17 +657,21 @@ export default function EncuestaPage() {
                 ))}
                 <Card>
                   <h3 className="font-semibold text-[color:var(--vandyke)]">
-                    Â¿CuÃ¡nto estÃ¡s dispuesto a pagar por el producto? (en pesos)
+                    Cuanto estas dispuesto a pagar por el producto? (en pesos)
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    EscribÃ­ el valor o rango que te parecerÃ­a adecuado pagar.
+                    Escribi solo un valor numerico estimado en pesos.
                   </p>
-                  <textarea
+                  <input
+                    aria-label="Monto estimado a pagar por el producto en pesos"
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    step="1"
                     value={willingnessToPay}
-                    onChange={(e) => setWillingnessToPay(e.target.value)}
-                    rows={3}
-                    placeholder="Ej.: $4.500 / Entre $4.000 y $5.000"
-                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-muted-foreground/70 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30"
+                    onChange={(e) => setWillingnessToPay(sanitizeWillingnessToPay(e.target.value))}
+                    placeholder="Ej.: 4500"
+                    className="mt-3 w-full rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-muted-foreground/70 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30"
                   />
                 </Card>
 
@@ -468,6 +684,7 @@ export default function EncuestaPage() {
                     el perfil del producto.
                   </p>
                   <textarea
+                    aria-label="Comentarios descriptivos sobre el producto"
                     value={descriptiveComments}
                     onChange={(e) => setDescriptiveComments(e.target.value)}
                     rows={4}
@@ -533,7 +750,7 @@ export default function EncuestaPage() {
                     ¿Te gustó el producto?
                   </h3>
                   <p className="text-xs text-muted-foreground">Tu impresión general inmediata.</p>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
                     {(
                       [
                         { id: "si", label: "Sí", color: "#3FAA5A", Icon: ThumbsUp },
@@ -573,7 +790,7 @@ export default function EncuestaPage() {
                     ¿Consumirías nuevamente este producto?
                   </h3>
                   <p className="text-xs text-muted-foreground">Intención de recompra del producto.</p>
-                  <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div className="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">
                     {(
                       [
                         { id: "si", label: "Sí", color: "#3FAA5A", Icon: ThumbsUp },
@@ -648,6 +865,7 @@ export default function EncuestaPage() {
                     Agregue cualquier comentario sobre qué le gustó o disgustó del producto.
                   </p>
                   <textarea
+                    aria-label="Comentarios afectivos sobre el producto"
                     value={affectiveComments}
                     onChange={(e) => setAffectiveComments(e.target.value)}
                     rows={4}
@@ -663,7 +881,7 @@ export default function EncuestaPage() {
                 type="button"
                 onClick={prev}
                 disabled={step === 1 || isSubmitting}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-5 py-3 text-sm font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-5 py-3 text-sm font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Volver
@@ -672,7 +890,7 @@ export default function EncuestaPage() {
                 <button
                   type="button"
                   onClick={next}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--moss)] px-7 py-3 text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)]"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--moss)] px-7 py-3 text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)] sm:w-auto"
                 >
                   Continuar
                   <ArrowRight className="h-4 w-4" />
@@ -681,7 +899,7 @@ export default function EncuestaPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--moss)] px-7 py-3 text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--moss)] px-7 py-3 text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--pumpkin)] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
                 >
                   {isSubmitting ? (
                     <>
@@ -700,7 +918,9 @@ export default function EncuestaPage() {
           </form>
         </div>
       </main>
-      <Footer />
+      <div className="mt-auto">
+        <Footer />
+      </div>
     </div>
   );
 }

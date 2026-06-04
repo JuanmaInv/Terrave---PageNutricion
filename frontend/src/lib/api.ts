@@ -1,12 +1,33 @@
 import { loadSurveys, saveSurvey, type SurveyResponse } from "./nutrilen";
 import { ReportFactory } from "./reports/report.factory";
 import type { ReportContext } from "./reports/report.exporter.interface";
+import { applySurveyFilters } from "./survey/apply-survey-filters";
 
 export { ReportFactory };
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 const ALLOW_LOCAL_FALLBACK = process.env.NEXT_PUBLIC_DEV_LOCAL_FALLBACK === "true";
 const API_PREFIX = "/api/v1";
+
+export interface DashboardSummary {
+  completedCount: number;
+  inProgressCount: number;
+}
+
+export interface SurveySessionDraft {
+  clientSessionKey: string;
+  currentStep?: number;
+  sex?: SurveyResponse["sex"];
+  diet?: SurveyResponse["diet"];
+  attrs?: Partial<SurveyResponse["attrs"]>;
+  descriptiveComments?: string;
+  acceptance?: number;
+  liked?: SurveyResponse["liked"];
+  consumeAgain?: SurveyResponse["consumeAgain"];
+  recommend?: number;
+  willingnessToPay?: string;
+  affectiveComments?: string;
+}
 
 function hasBackend(): boolean {
   return Boolean(API_URL && API_URL.trim().length > 0);
@@ -99,6 +120,33 @@ export async function enviarEncuesta(survey: SurveyResponse): Promise<void> {
   throw new Error("Backend no configurado.");
 }
 
+export async function crearSesionEncuesta(
+  draft: SurveySessionDraft,
+): Promise<{ id: string; startedAt: string; updatedAt: string }> {
+  if (!hasBackend()) {
+    throw new Error("Backend no configurado.");
+  }
+
+  return await request("/encuestas/sesiones", {
+    method: "POST",
+    body: JSON.stringify(draft),
+  });
+}
+
+export async function actualizarSesionEncuesta(
+  sessionId: string,
+  draft: SurveySessionDraft,
+): Promise<{ id: string; startedAt: string; updatedAt: string }> {
+  if (!hasBackend()) {
+    throw new Error("Backend no configurado.");
+  }
+
+  return await request(`/encuestas/sesiones/${sessionId}`, {
+    method: "PATCH",
+    body: JSON.stringify(draft),
+  });
+}
+
 export async function obtenerEstadisticas(params?: {
   token?: string;
   diet?: string;
@@ -124,7 +172,38 @@ export async function obtenerEstadisticas(params?: {
         : new Error("No se pudieron obtener estadisticas del backend.");
     }
   }
-  if (ALLOW_LOCAL_FALLBACK) return loadSurveys();
+  if (ALLOW_LOCAL_FALLBACK) return applySurveyFilters(loadSurveys(), params);
+  throw new Error("Backend no configurado.");
+}
+
+export async function obtenerResumenDashboard(params?: {
+  token?: string;
+  diet?: string;
+  sex?: string;
+  from?: string;
+  to?: string;
+}): Promise<DashboardSummary> {
+  if (hasBackend()) {
+    const query = new URLSearchParams();
+    if (params?.diet && params.diet !== "all") query.set("diet", params.diet);
+    if (params?.sex && params.sex !== "all") query.set("sex", params.sex);
+    if (params?.from) query.set("from", params.from);
+    if (params?.to) query.set("to", params.to);
+    const qs = query.toString();
+
+    return await request<DashboardSummary>(`/estadisticas/resumen${qs ? `?${qs}` : ""}`, {
+      headers: params?.token ? { Authorization: `Bearer ${params.token}` } : undefined,
+    });
+  }
+
+  if (ALLOW_LOCAL_FALLBACK) {
+    const local = applySurveyFilters(loadSurveys(), params);
+    return {
+      completedCount: local.length,
+      inProgressCount: 0,
+    };
+  }
+
   throw new Error("Backend no configurado.");
 }
 

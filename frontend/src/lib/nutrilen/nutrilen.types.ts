@@ -46,6 +46,7 @@ export const ACCEPTANCE_OPTIONS: { value: number; label: string }[] = [
 
 export interface SurveyResponse {
   id: string;
+  sessionId?: string;
   date: string; // ISO
   sex: Sex;
   diet: Diet;

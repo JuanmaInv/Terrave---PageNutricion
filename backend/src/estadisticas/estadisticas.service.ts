@@ -1,7 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { spawn } from "child_process";
 import { existsSync } from "fs";
 import { join } from "path";
+import { DashboardSummaryDto } from "./dto/dashboard-summary.dto";
 import { GetEstadisticasQueryDto } from "./dto/get-estadisticas-query.dto";
 import { SurveyResponseDto } from "./dto/survey-response.dto";
 import { EstadisticasRepository } from "./repositories/estadisticas.repository";
@@ -13,10 +14,37 @@ import { EstadisticasRepository } from "./repositories/estadisticas.repository";
  */
 @Injectable()
 export class EstadisticasService {
+  private readonly logger = new Logger(EstadisticasService.name);
+
   constructor(private readonly estadisticasRepository: EstadisticasRepository) {}
 
   async getSurveys(query: GetEstadisticasQueryDto): Promise<SurveyResponseDto[]> {
-    return this.estadisticasRepository.findAll(query);
+    const surveys = await this.estadisticasRepository.findAll(query);
+    this.logger.log(
+      JSON.stringify({
+        event: "stats_fetched",
+        count: surveys.length,
+        hasDietFilter: Boolean(query.diet),
+        hasSexFilter: Boolean(query.sex),
+        hasDateRange: Boolean(query.from || query.to),
+      })
+    );
+    return surveys;
+  }
+
+  async getDashboardSummary(query: GetEstadisticasQueryDto): Promise<DashboardSummaryDto> {
+    const summary = await this.estadisticasRepository.getDashboardSummary(query);
+    this.logger.log(
+      JSON.stringify({
+        event: "stats_summary_fetched",
+        completedCount: summary.completedCount,
+        inProgressCount: summary.inProgressCount,
+        hasDietFilter: Boolean(query.diet),
+        hasSexFilter: Boolean(query.sex),
+        hasDateRange: Boolean(query.from || query.to),
+      })
+    );
+    return summary;
   }
 
   async getExcelReport(query: GetEstadisticasQueryDto): Promise<Buffer> {
@@ -34,12 +62,28 @@ export class EstadisticasService {
 
     const url = this.getPythonExporterUrl();
     if (url) {
-      return await this.callPythonFunction(url, payload);
+      const buffer = await this.callPythonFunction(url, payload);
+      this.logger.log(
+        JSON.stringify({
+          event: "excel_export_generated",
+          strategy: "http",
+          rows: surveys.length,
+        })
+      );
+      return buffer;
     }
 
     const pythonExecutable = process.env.PYTHON_EXECUTABLE ?? "python";
     const scriptPath = this.resolvePythonScriptPath();
-    return await this.runPythonExporter(pythonExecutable, scriptPath, payload);
+    const buffer = await this.runPythonExporter(pythonExecutable, scriptPath, payload);
+    this.logger.log(
+      JSON.stringify({
+        event: "excel_export_generated",
+        strategy: "local_python",
+        rows: surveys.length,
+      })
+    );
+    return buffer;
   }
 
   private resolvePythonScriptPath(): string {

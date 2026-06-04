@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   InternalServerErrorException,
+  Logger,
   Query,
   Res,
   UseGuards,
@@ -17,7 +18,15 @@ import { EstadisticasService } from "./estadisticas.service";
  */
 @Controller("estadisticas")
 export class EstadisticasController {
+  private readonly logger = new Logger(EstadisticasController.name);
+
   constructor(private readonly estadisticasService: EstadisticasService) {}
+
+  @UseGuards(AdminGuard)
+  @Get("resumen")
+  async getSummary(@Query() query: GetEstadisticasQueryDto) {
+    return this.estadisticasService.getDashboardSummary(query);
+  }
 
   @UseGuards(AdminGuard)
   @Get()
@@ -40,7 +49,16 @@ export class EstadisticasController {
       res.send(buffer);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unknown excel export error";
-      throw new InternalServerErrorException(`Excel export failed: ${detail}`);
+      this.logger.error(
+        JSON.stringify({
+          event: "excel_export_failed",
+          hasDietFilter: Boolean(query.diet),
+          hasSexFilter: Boolean(query.sex),
+          hasDateRange: Boolean(query.from || query.to),
+          detail,
+        })
+      );
+      throw new InternalServerErrorException("Excel export failed");
     }
   }
 }

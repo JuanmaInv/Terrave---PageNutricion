@@ -28,7 +28,7 @@ export function AdminHeader({
           Dashboard académico de análisis sensorial del medallón de lenteja.
         </p>
       </div>
-      <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[360px]">
+      <div className="grid w-full min-w-0 grid-cols-1 gap-2 min-[520px]:grid-cols-2 lg:w-auto lg:min-w-[360px] lg:grid-cols-3">
         <button
           type="button"
           onClick={onRefresh}

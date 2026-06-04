@@ -82,7 +82,7 @@ export function StatsFilters({
           </button>
         )}
       </div>
-      <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+      <p className="mt-4 text-xs leading-relaxed text-muted-foreground sm:text-sm">
         Mostrando <strong className="text-[color:var(--vandyke)]">{total}</strong> participantes · Última actualización: {lastUpdate}
       </p>
     </section>

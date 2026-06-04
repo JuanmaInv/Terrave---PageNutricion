@@ -38,7 +38,7 @@ export function CommentsPanel({
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mejor valorado</p>
-                <h3 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">{bestAttr.metric}</h3>
+                <h3 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">{bestAttr.metric}</h3>
               </div>
               <p className="ml-auto font-serif text-2xl font-semibold text-[color:var(--moss)] sm:text-3xl">
                 {bestAttr.value.toFixed(1)}
@@ -52,7 +52,7 @@ export function CommentsPanel({
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menor valoración</p>
-                <h3 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">{worstAttr.metric}</h3>
+                <h3 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">{worstAttr.metric}</h3>
               </div>
               <p className="ml-auto font-serif text-2xl font-semibold text-[color:var(--pumpkin)] sm:text-3xl">
                 {worstAttr.value.toFixed(1)}
@@ -72,7 +72,7 @@ export function CommentsPanel({
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Comentarios y observaciones
               </p>
-              <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
+              <h2 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">
                 Observaciones descriptivas
               </h2>
             </div>
@@ -89,7 +89,7 @@ export function CommentsPanel({
             {descriptiveCommentsList.map((c) => (
               <li
                 key={c.id}
-                className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--vandyke)]/90 transition hover:border-[color:var(--moss)]/50"
+                className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--surface-text)] transition hover:border-[color:var(--moss)]/50"
               >
                 <p className="leading-relaxed">&quot;{c.descriptiveComments}&quot;</p>
                 <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -109,7 +109,7 @@ export function CommentsPanel({
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Comentarios y observaciones
               </p>
-              <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
+              <h2 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">
                 Observaciones afectivas
               </h2>
             </div>
@@ -126,7 +126,7 @@ export function CommentsPanel({
             {affectiveCommentsList.map((c) => (
               <li
                 key={c.id}
-                className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--vandyke)]/90 transition hover:border-[color:var(--pumpkin)]/50"
+                className="rounded-2xl border border-border/60 bg-background/40 p-3.5 text-sm text-[color:var(--surface-text)] transition hover:border-[color:var(--pumpkin)]/50"
               >
                 <p className="leading-relaxed">&quot;{c.affectiveComments}&quot;</p>
                 <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -139,35 +139,45 @@ export function CommentsPanel({
       </section>
 
       <section className="mt-6">
-        <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-8">
+        <div className="relative min-w-0 overflow-hidden rounded-[1.8rem] border border-border/60 bg-card/95 p-5 shadow-[var(--shadow-card)] sm:rounded-[2rem] sm:p-8">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-1"
+            className="pointer-events-none absolute inset-x-0 top-0 h-1.5"
             style={{ background: `linear-gradient(to right, ${MOSS}, ${ORANGE}, ${PUMPKIN})` }}
           />
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[color:var(--vandyke)]/10 text-[color:var(--vandyke)]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-8 -top-12 h-28 w-28 rounded-full blur-3xl"
+            style={{ background: `color-mix(in oklab, ${PUMPKIN} 24%, transparent)` }}
+          />
+          <div className="flex flex-wrap items-start gap-3 sm:items-center">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[color:var(--vandyke)]/18 text-[color:var(--surface-title)] shadow-[0_12px_28px_-18px_rgba(39,18,11,0.65)]">
               <Sparkles className="h-5 w-5" />
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--surface-title)]/72">
                 Conclusión general
               </p>
-              <h2 className="font-serif text-2xl font-semibold text-[color:var(--vandyke)]">
+              <h2 className="font-serif text-2xl font-semibold tracking-tight text-[color:var(--surface-title)] sm:text-[2.1rem]">
                 Resumen interpretativo
               </h2>
             </div>
-            <span className="ml-auto font-serif text-2xl font-semibold tabular-nums text-[color:var(--moss)] sm:text-3xl">
+            <span className="ml-auto inline-flex min-w-[5.75rem] shrink-0 items-center justify-center self-center rounded-full bg-[color:var(--moss)]/12 px-3 py-1.5 text-center font-serif text-2xl font-semibold tabular-nums leading-none text-[color:var(--moss)] sm:min-w-[6.25rem] sm:text-3xl">
               {Math.round(animCount)}%
             </span>
           </div>
           {total > 0 && bestAttr && worstAttr ? (
-            <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-[color:var(--vandyke)]/85">
+            <p className="mt-5 max-w-3xl text-[15px] leading-8 text-[color:var(--surface-text)] sm:text-base">
               Sobre <strong>{total}</strong> participantes, el producto presenta un{" "}
               <strong>{acceptancePct}%</strong> de aceptación. El atributo mejor valorado es{" "}
-              <span className="font-semibold text-[color:var(--moss)]">{bestAttr.metric}</span> ({bestAttr.value.toFixed(1)}/5),
-              mientras que <span className="font-semibold text-[color:var(--pumpkin)]">{worstAttr.metric}</span> ({worstAttr.value.toFixed(1)}/5)
-              representa el aspecto con mayor margen de mejora.
+              <span className="rounded-full bg-[color:var(--moss)]/10 px-2 py-0.5 font-semibold text-[color:var(--moss)]">
+                {bestAttr.metric}
+              </span>{" "}
+              ({bestAttr.value.toFixed(1)}/5), mientras que{" "}
+              <span className="rounded-full bg-[color:var(--pumpkin)]/10 px-2 py-0.5 font-semibold text-[color:var(--pumpkin)]">
+                {worstAttr.metric}
+              </span>{" "}
+              ({worstAttr.value.toFixed(1)}/5) representa el aspecto con mayor margen de mejora.
             </p>
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">

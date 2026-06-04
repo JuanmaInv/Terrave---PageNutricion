@@ -1,32 +1,31 @@
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "./e2e",
-  fullyParallel: true,
-  timeout: 60000,
-  forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: "list",
+  testDir: "./tests/e2e",
+  fullyParallel: false,
+  workers: 1,
+  timeout: 45_000,
+  expect: {
+    timeout: 10_000,
+  },
+  reporter: [["html", { open: "never" }], ["list"]],
   use: {
     baseURL: "http://127.0.0.1:3001",
+    navigationTimeout: 45_000,
     trace: "on-first-retry",
-    screenshot: "only-on-failure",
   },
   webServer: {
     command: "pnpm dev",
-    url: "http://127.0.0.1:3001",
-    // Always start a fresh dev server for tests so env vars are deterministic.
-    reuseExistingServer: false,
-    timeout: 120000,
+    port: 3001,
+    reuseExistingServer: !process.env.CI,
     env: {
+      NEXT_PUBLIC_API_URL: "http://127.0.0.1:3001/mock-api",
       NEXT_PUBLIC_DEV_LOCAL_FALLBACK: "true",
+      NEXT_PUBLIC_E2E_AUTH_MODE: "true",
     },
   },
   projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
   ],
 });

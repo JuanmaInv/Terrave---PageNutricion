@@ -2,29 +2,33 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { obtenerEstadisticas } from "@/lib/api";
-import { type SurveyResponse } from "@/lib/nutrilen";
+import { obtenerResumenDashboard, type DashboardSummary } from "@/lib/api";
 import { type SurveyFilters } from "./useSurveyFilters";
 
-export interface UseSurveyStatsResult {
-  data: SurveyResponse[];
+const EMPTY_SUMMARY: DashboardSummary = {
+  completedCount: 0,
+  inProgressCount: 0,
+};
+
+export interface UseSurveyResumenResult {
+  summary: DashboardSummary;
   isLoading: boolean;
-  refresh: () => void;
+  refresh: () => Promise<void>;
 }
 
-export interface UseSurveyStatsOptions {
+export interface UseSurveyResumenOptions {
   getToken: () => Promise<string | null>;
   isEnabled: boolean;
 }
 
-export function useSurveyStats(
+export function useSurveyResumen(
   filters: SurveyFilters,
-  { getToken, isEnabled }: UseSurveyStatsOptions,
-): UseSurveyStatsResult {
-  const [data, setData] = useState<SurveyResponse[]>([]);
+  { getToken, isEnabled }: UseSurveyResumenOptions,
+): UseSurveyResumenResult {
+  const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchStats = useCallback(async () => {
+  const fetchSummary = useCallback(async () => {
     if (!isEnabled) return;
 
     setIsLoading(true);
@@ -32,7 +36,7 @@ export function useSurveyStats(
       const token = await getToken();
       if (!token) throw new Error("No se pudo obtener token de administracion.");
 
-      const rows = await obtenerEstadisticas({
+      const nextSummary = await obtenerResumenDashboard({
         token,
         diet: filters.diet !== "all" ? filters.diet : undefined,
         sex: filters.sex !== "all" ? filters.sex : undefined,
@@ -40,35 +44,31 @@ export function useSurveyStats(
         to: filters.to || undefined,
       });
 
-      setData(rows);
+      setSummary(nextSummary);
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "No se pudieron cargar estadisticas del backend.",
+          : "No se pudo cargar el resumen del dashboard.",
       );
     } finally {
       setIsLoading(false);
     }
   }, [filters, getToken, isEnabled]);
 
-  const refresh = useCallback(() => {
-    void fetchStats()
-      .then(() => {
-        toast.success("Estadisticas actualizadas");
-      })
-      .catch(() => {});
-  }, [fetchStats]);
-
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void fetchStats();
+      void fetchSummary();
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [fetchStats]);
+  }, [fetchSummary]);
 
-  return { data, isLoading, refresh };
+  const refresh = useCallback(async () => {
+    await fetchSummary();
+  }, [fetchSummary]);
+
+  return { summary, isLoading, refresh };
 }

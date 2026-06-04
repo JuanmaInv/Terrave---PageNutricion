@@ -1,7 +1,6 @@
 import {
   IsIn,
   IsInt,
-  IsISO8601,
   IsNotEmpty,
   IsObject,
   IsOptional,
@@ -9,7 +8,7 @@ import {
   Matches,
   Max,
   Min,
-  ValidateNested
+  ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
 
@@ -18,92 +17,96 @@ const DIET = ["omnivoro", "ovo_lacto", "vegano", "flexitariano", "otro"] as cons
 const LIKED = ["si", "no"] as const;
 const CONSUME_AGAIN = ["si", "no", "tal_vez"] as const;
 
-class AttrsDto {
+class PartialAttrsDto {
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  color!: number;
+  color?: number;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  aroma!: number;
+  aroma?: number;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  firmeza!: number;
+  firmeza?: number;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  untuosidad!: number;
+  untuosidad?: number;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  sabor_tostado!: number;
+  sabor_tostado?: number;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  persistencia!: number;
+  persistencia?: number;
 }
 
-export class CreateEncuestaDto {
-  @IsOptional()
+export class UpsertEncuestaSessionDto {
   @IsString()
   @IsNotEmpty()
-  id?: string;
+  clientSessionKey!: string;
 
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  sessionId?: string;
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  currentStep?: number;
 
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  clientSessionKey?: string;
-
-  @IsOptional()
-  @IsISO8601()
-  date?: string;
-
   @IsString()
   @IsIn(SEX)
-  sex!: (typeof SEX)[number];
+  sex?: (typeof SEX)[number];
 
+  @IsOptional()
   @IsString()
   @IsIn(DIET)
-  diet!: (typeof DIET)[number];
+  diet?: (typeof DIET)[number];
 
+  @IsOptional()
   @IsObject()
   @ValidateNested()
-  @Type(() => AttrsDto)
-  attrs!: AttrsDto;
+  @Type(() => PartialAttrsDto)
+  attrs?: PartialAttrsDto;
 
   @IsOptional()
   @IsString()
   descriptiveComments?: string;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  acceptance!: number;
+  acceptance?: number;
 
+  @IsOptional()
   @IsString()
   @IsIn(LIKED)
-  liked!: (typeof LIKED)[number];
+  liked?: (typeof LIKED)[number];
 
+  @IsOptional()
   @IsString()
   @IsIn(CONSUME_AGAIN)
-  consumeAgain!: (typeof CONSUME_AGAIN)[number];
+  consumeAgain?: (typeof CONSUME_AGAIN)[number];
 
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  recommend!: number;
+  recommend?: number;
 
   @IsOptional()
   @IsString()

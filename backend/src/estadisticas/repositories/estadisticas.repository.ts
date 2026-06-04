@@ -1,12 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../database/database.service";
+import { DashboardSummaryDto } from "../dto/dashboard-summary.dto";
 import { GetEstadisticasQueryDto } from "../dto/get-estadisticas-query.dto";
 import { SurveyResponseDto } from "../dto/survey-response.dto";
 import { IEstadisticasRepository } from "../interfaces/estadisticas.repository.interface";
-import { DateRangeFilter } from "../filters/date-range.filter";
-import { DietFilter } from "../filters/diet.filter";
-import { SexFilter } from "../filters/sex.filter";
-import { FilterStrategy } from "../filters/filter.strategy.interface";
 
 type SurveyRow = {
   id: string;
@@ -28,33 +25,24 @@ type SurveyRow = {
   affective_comments: string | null;
 };
 
+type CountRow = {
+  count: string;
+};
+
+const ARGENTINA_TIMEZONE = "America/Argentina/Buenos_Aires";
+
 /**
  * PostgreSQL implementation of IEstadisticasRepository.
- * Uses the Strategy pattern to build dynamic WHERE clauses.
- * Pattern: Repository + Strategy
+ * Centralizes both detailed survey queries and dashboard counters.
  */
 @Injectable()
 export class EstadisticasRepository implements IEstadisticasRepository {
+  private lastExpiredSessionsCleanupAt = 0;
+
   constructor(private readonly db: DatabaseService) {}
 
   async findAll(query: GetEstadisticasQueryDto): Promise<SurveyResponseDto[]> {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-
-    // Compose active filter strategies — OCP: adding a new filter = add a new strategy class
-    const strategies: FilterStrategy[] = [
-      ...(query.diet ? [new DietFilter(query.diet)] : []),
-      ...(query.sex ? [new SexFilter(query.sex)] : []),
-      new DateRangeFilter(query.from, query.to),
-    ];
-
-    let paramIndex = 1;
-    for (const strategy of strategies) {
-      paramIndex = strategy.apply(conditions, values, paramIndex);
-    }
-
-    const where =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const { where, values } = this.buildWhereClause(query, "fecha");
 
     const sql = `
       SELECT
@@ -70,7 +58,36 @@ export class EstadisticasRepository implements IEstadisticasRepository {
     return result.rows.map(this.mapRow);
   }
 
-  /** Maps a raw DB row to the API response shape */
+  async getDashboardSummary(query: GetEstadisticasQueryDto): Promise<DashboardSummaryDto> {
+    await this.ensureExpiredSessionsCleanup();
+
+    const completedFilters = this.buildWhereClause(query, "fecha");
+    const inProgressFilters = this.buildWhereClause(query, "fecha_inicio");
+
+    const completedSql = `
+      SELECT COUNT(*)::text AS count
+      FROM public.encuestas
+      ${completedFilters.where}
+    `;
+
+    const inProgressSql = `
+      SELECT COUNT(*)::text AS count
+      FROM public.encuesta_sesiones
+      ${inProgressFilters.where ? `${inProgressFilters.where} AND` : "WHERE"}
+        estado = 'en_curso'
+    `;
+
+    const [completedResult, inProgressResult] = await Promise.all([
+      this.db.query<CountRow>(completedSql, completedFilters.values),
+      this.db.query<CountRow>(inProgressSql, inProgressFilters.values),
+    ]);
+
+    return {
+      completedCount: Number(completedResult.rows[0]?.count ?? "0"),
+      inProgressCount: Number(inProgressResult.rows[0]?.count ?? "0"),
+    };
+  }
+
   private mapRow(row: SurveyRow): SurveyResponseDto {
     return {
       id: row.id,
@@ -93,5 +110,71 @@ export class EstadisticasRepository implements IEstadisticasRepository {
       willingnessToPay: row.willingness_to_pay ?? "",
       affectiveComments: row.affective_comments ?? "",
     };
+  }
+
+  private buildWhereClause(
+    query: GetEstadisticasQueryDto,
+    dateColumn: "fecha" | "fecha_inicio"
+  ): { where: string; values: unknown[] } {
+    const conditions: string[] = [];
+    const values: unknown[] = [];
+
+    if (query.diet) {
+      values.push(query.diet);
+      conditions.push(`dieta = $${values.length}`);
+    }
+
+    if (query.sex) {
+      values.push(query.sex);
+      conditions.push(`sexo = $${values.length}`);
+    }
+
+    if (query.from) {
+      values.push(query.from);
+      conditions.push(`timezone('${ARGENTINA_TIMEZONE}', ${dateColumn})::date >= $${values.length}::date`);
+    }
+
+    if (query.to) {
+      values.push(query.to);
+      conditions.push(`timezone('${ARGENTINA_TIMEZONE}', ${dateColumn})::date <= $${values.length}::date`);
+    }
+
+    return {
+      where: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
+      values,
+    };
+  }
+
+  private async deleteExpiredSessions(): Promise<void> {
+    const expirationMinutes = Number(process.env.SURVEY_IN_PROGRESS_WINDOW_MINUTES ?? "30");
+
+    await this.db.query(
+      `
+        DELETE FROM public.encuesta_sesiones
+        WHERE estado = 'en_curso'
+          AND fecha_actualizacion < timezone('utc'::text, now()) - ($1 * interval '1 minute')
+      `,
+      [expirationMinutes]
+    );
+  }
+
+  private async ensureExpiredSessionsCleanup(): Promise<void> {
+    const cleanupIntervalMs = Number(
+      process.env.SURVEY_SESSION_CLEANUP_INTERVAL_MS ?? "300000"
+    );
+    const now = Date.now();
+
+    if (now - this.lastExpiredSessionsCleanupAt < cleanupIntervalMs) {
+      return;
+    }
+
+    this.lastExpiredSessionsCleanupAt = now;
+
+    try {
+      await this.deleteExpiredSessions();
+    } catch (error) {
+      this.lastExpiredSessionsCleanupAt = 0;
+      throw error;
+    }
   }
 }

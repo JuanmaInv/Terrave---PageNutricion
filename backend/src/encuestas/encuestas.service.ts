@@ -1,7 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { CreateEncuestaDto } from "./dto/create-encuesta.dto";
+import { UpsertEncuestaSessionDto } from "./dto/upsert-encuesta-session.dto";
 import {
+  EncuestaSessionRecord,
   IEncuestasRepository,
   InsertedEncuesta,
 } from "./interfaces/encuestas.repository.interface";
@@ -14,6 +16,8 @@ import { EncuestasRepository } from "./repositories/encuestas.repository";
  */
 @Injectable()
 export class EncuestasService {
+  private readonly logger = new Logger(EncuestasService.name);
+
   // Injecting the concrete class but typed as the interface for clarity.
   // For full DIP with mocking support, use a custom injection token.
   constructor(private readonly encuestasRepository: EncuestasRepository) {}
@@ -21,6 +25,41 @@ export class EncuestasService {
   async create(dto: CreateEncuestaDto): Promise<InsertedEncuesta> {
     const id = randomUUID();
     const fecha = dto.date ?? new Date().toISOString();
-    return this.encuestasRepository.create(dto, id, fecha);
+    const created = await this.encuestasRepository.create(dto, id, fecha);
+    this.logger.log(
+      JSON.stringify({
+        event: "survey_created",
+        surveyId: created.id,
+        hasSession: Boolean(dto.sessionId),
+        hasDescriptiveComments: Boolean(dto.descriptiveComments?.trim()),
+        hasAffectiveComments: Boolean(dto.affectiveComments?.trim()),
+      })
+    );
+    return created;
+  }
+
+  async createSession(dto: UpsertEncuestaSessionDto): Promise<EncuestaSessionRecord> {
+    const id = randomUUID();
+    const session = await this.encuestasRepository.createSession(id, dto);
+    this.logger.log(
+      JSON.stringify({
+        event: "survey_session_created",
+        sessionId: session.id,
+        currentStep: dto.currentStep ?? 1,
+      })
+    );
+    return session;
+  }
+
+  async updateSession(id: string, dto: UpsertEncuestaSessionDto): Promise<EncuestaSessionRecord> {
+    const session = await this.encuestasRepository.updateSession(id, dto);
+    this.logger.log(
+      JSON.stringify({
+        event: "survey_session_updated",
+        sessionId: session.id,
+        currentStep: dto.currentStep ?? null,
+      })
+    );
+    return session;
   }
 }

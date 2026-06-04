@@ -35,6 +35,8 @@ export interface DietAcceptanceItem {
 
 export interface AdminDashboardViewModel {
   total: number;
+  completedCount: number;
+  inProgressCount: number;
   sensorial: SensorialItem[];
   globalScore: number;
   acceptancePct: number;

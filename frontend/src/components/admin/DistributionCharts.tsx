@@ -11,6 +11,9 @@ import {
   Legend,
 } from "recharts";
 import type { DietAcceptanceItem, DistributionItem } from "./admin-dashboard.types";
+import { AdminChartTooltip } from "./AdminChartTooltip";
+import { AdminInfoTooltip } from "./AdminInfoTooltip";
+import { useAdminChartPalette } from "./useAdminChartPalette";
 
 function AnimatedBar({ value, color, delay = 0 }: { value: number; color: string; delay?: number }) {
   const [w, setW] = React.useState(0);
@@ -35,20 +38,26 @@ interface DistributionChartsProps {
   dietAcceptance: DietAcceptanceItem[];
 }
 
-const VANDYKE = "#65382B";
-
 export function DistributionCharts({ total, dietDist, sexDist, dietAcceptance }: DistributionChartsProps) {
+  const palette = useAdminChartPalette();
+
   return (
     <>
       <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-2">
         <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-          <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-            Distribución de dietas
-          </h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">
+              Distribución de dietas
+            </h2>
+            <AdminInfoTooltip
+              label="Mas informacion sobre distribucion de dietas"
+              content="Muestra como se reparte la participacion entre los distintos perfiles alimentarios dentro del filtro activo."
+            />
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Composición de la muestra evaluada ({total} participantes).
           </p>
-          <div className="mt-4 h-72 sm:h-64">
+          <div className="mt-4 h-80 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -64,19 +73,13 @@ export function DistributionCharts({ total, dietDist, sexDist, dietAcceptance }:
                     <Cell key={d.name} fill={d.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 12,
-                    border: "1px solid #65382B22",
-                    background: "var(--card)",
-                  }}
-                  formatter={(v: number, n) => [`${v} participantes`, n]}
-                />
+                <Tooltip content={<AdminChartTooltip valueSuffix="" />} formatter={(v: number, n) => [v, n]} />
                 <Legend
                   verticalAlign="bottom"
                   iconType="circle"
+                  wrapperStyle={{ paddingTop: 12 }}
                   formatter={(v) => (
-                    <span style={{ color: VANDYKE, fontSize: 12 }}>{v}</span>
+                    <span style={{ color: palette.chartText, fontSize: 12, fontWeight: 600 }}>{v}</span>
                   )}
                 />
               </PieChart>
@@ -89,7 +92,7 @@ export function DistributionCharts({ total, dietDist, sexDist, dietAcceptance }:
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
                   {d.name}
                 </span>
-                <span className="font-semibold text-[color:var(--vandyke)]">
+                <span className="font-semibold" style={{ color: palette.surfaceTitle }}>
                   {d.pct}% ({d.value})
                 </span>
               </li>
@@ -98,9 +101,15 @@ export function DistributionCharts({ total, dietDist, sexDist, dietAcceptance }:
         </div>
 
         <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-          <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-            Distribución por sexo biológico
-          </h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">
+              Distribución por sexo biológico
+            </h2>
+            <AdminInfoTooltip
+              label="Mas informacion sobre distribucion por sexo biologico"
+              content="Resume la composicion demografica de la muestra segun sexo biologico declarado."
+            />
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Composición demográfica de la muestra.
           </p>
@@ -108,7 +117,7 @@ export function DistributionCharts({ total, dietDist, sexDist, dietAcceptance }:
             {sexDist.map((s) => (
               <li key={s.id}>
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate font-medium text-[color:var(--vandyke)]">
+                  <span className="min-w-0 truncate font-medium" style={{ color: palette.surfaceTitle }}>
                     {s.name}
                   </span>
                   <span className="shrink-0 font-serif text-lg font-semibold" style={{ color: s.color }}>
@@ -135,9 +144,15 @@ export function DistributionCharts({ total, dietDist, sexDist, dietAcceptance }:
           <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
               <div>
-                <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-                  Aceptación según tipo de dieta
-                </h2>
+                <div className="flex items-start gap-3">
+                  <h2 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">
+                    Aceptación según tipo de dieta
+                  </h2>
+                  <AdminInfoTooltip
+                    label="Mas informacion sobre aceptacion por dieta"
+                    content="Compara el porcentaje de gusto positivo dentro de cada grupo alimentario que tenga respuestas suficientes."
+                  />
+                </div>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Porcentaje de aprobación del producto según el perfil alimentario.
                 </p>
@@ -148,7 +163,7 @@ export function DistributionCharts({ total, dietDist, sexDist, dietAcceptance }:
               {dietAcceptance.map((d, i) => (
                 <li key={d.name}>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 font-medium text-[color:var(--vandyke)]">
+                    <span className="flex items-center gap-2 font-medium" style={{ color: palette.surfaceTitle }}>
                       <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
                       {d.name}
                       <span className="text-xs text-muted-foreground">({d.count})</span>

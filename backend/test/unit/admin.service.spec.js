@@ -4,6 +4,7 @@ import { AdminService } from "../../src/admin/admin.service";
 describe("Servicio de administracion", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    delete process.env.ADMIN_EMAILS;
   });
 
   it("debe extraer el token cuando el esquema Authorization es Bearer", () => {
@@ -139,6 +140,74 @@ describe("Servicio de administracion", () => {
       email: "admin@example.com",
     });
     process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
+  it("debe sincronizar un usuario de Clerk con rol cliente por defecto", async () => {
+    const originalSecret = process.env.CLERK_SECRET_KEY;
+    process.env.CLERK_SECRET_KEY = "sk_test_123";
+    const service = new AdminService({
+      async query(sql, values) {
+        expect(sql).toMatch(/INSERT INTO public\.usuarios/i);
+        expect(values[0]).toBe("Juan Perez");
+        expect(values[1]).toBe("user@example.com");
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              id: "user-1",
+              nombre: "Juan Perez",
+              email: "user@example.com",
+              rol: "cliente",
+              activo: true,
+            },
+          ],
+        };
+      },
+    });
+    service.verifyClerkJwt = vi.fn().mockResolvedValue({ sub: "user_123" });
+    service.buildClerkClient = vi.fn(() => ({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          firstName: "Juan",
+          lastName: "Perez",
+          primaryEmailAddress: { emailAddress: "user@example.com" },
+        }),
+      },
+    }));
+
+    await expect(service.syncUserFromToken("token")).resolves.toEqual({
+      email: "user@example.com",
+      role: "cliente",
+      isAdmin: false,
+    });
+    process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
+  it("debe permitir acceso admin por ADMIN_EMAILS aunque falle la base", async () => {
+    const originalSecret = process.env.CLERK_SECRET_KEY;
+    const originalAdmins = process.env.ADMIN_EMAILS;
+    process.env.CLERK_SECRET_KEY = "sk_test_123";
+    process.env.ADMIN_EMAILS = "admin@example.com";
+    const service = new AdminService({
+      async query() {
+        throw new Error("Connection terminated due to connection timeout");
+      },
+    });
+    service.verifyClerkJwt = vi.fn().mockResolvedValue({ sub: "user_123" });
+    service.buildClerkClient = vi.fn(() => ({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          primaryEmailAddress: { emailAddress: "admin@example.com" },
+        }),
+      },
+    }));
+
+    await expect(service.validateAdminToken("token")).resolves.toEqual({
+      isAdmin: true,
+      email: "admin@example.com",
+    });
+    process.env.CLERK_SECRET_KEY = originalSecret;
+    process.env.ADMIN_EMAILS = originalAdmins;
   });
 
   it("debe devolver false cuando rowCount no viene informado", async () => {

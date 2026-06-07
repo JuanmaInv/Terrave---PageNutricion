@@ -3,8 +3,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { AUTH_ENABLED } from "@/lib/auth";
 
-const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID?.trim() ?? "";
 
 export const metadata: Metadata = {
@@ -25,7 +25,7 @@ export default function RootLayout({
       >
         Saltar al contenido principal
       </a>
-      {!TEST_AUTH_MODE && CLARITY_PROJECT_ID ? (
+      {AUTH_ENABLED && CLARITY_PROJECT_ID ? (
         <Script
           id="microsoft-clarity"
           strategy="afterInteractive"
@@ -48,7 +48,7 @@ export default function RootLayout({
   return (
     <html lang="es" className="h-full antialiased">
       <body className="min-h-full">
-        {TEST_AUTH_MODE ? content : <ClerkProvider>{content}</ClerkProvider>}
+        {AUTH_ENABLED ? <ClerkProvider>{content}</ClerkProvider> : content}
       </body>
     </html>
   );

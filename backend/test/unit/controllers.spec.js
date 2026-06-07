@@ -13,8 +13,34 @@ describe("Controladores HTTP", () => {
   });
 
   it("debe devolver isAdmin true desde AdminController.getMe", async () => {
-    const controller = new AdminController();
+    const controller = new AdminController({
+      getTokenFromAuthorization() {
+        return "token";
+      },
+      async syncUserFromToken() {
+        return { email: "user@example.com", role: "cliente", isAdmin: false };
+      },
+    });
     await expect(controller.getMe()).resolves.toEqual({ isAdmin: true });
+  });
+
+  it("debe sincronizar el usuario autenticado en AdminController", async () => {
+    const controller = new AdminController({
+      getTokenFromAuthorization(authorization) {
+        expect(authorization).toBe("Bearer token-1");
+        return "token-1";
+      },
+      async syncUserFromToken(token) {
+        expect(token).toBe("token-1");
+        return { email: "user@example.com", role: "cliente", isAdmin: false };
+      },
+    });
+
+    await expect(controller.syncUser("Bearer token-1")).resolves.toEqual({
+      email: "user@example.com",
+      role: "cliente",
+      isAdmin: false,
+    });
   });
 
   it("debe mapear la respuesta de sesión creada en EncuestasController", async () => {

@@ -23,43 +23,61 @@ export class EncuestasService {
   constructor(private readonly encuestasRepository: EncuestasRepository) {}
 
   async create(dto: CreateEncuestaDto): Promise<InsertedEncuesta> {
+    const normalizedDto = this.normalizeSurveyTextFields(dto);
     const id = randomUUID();
-    const fecha = dto.date ?? new Date().toISOString();
-    const created = await this.encuestasRepository.create(dto, id, fecha);
+    const fecha = normalizedDto.date ?? new Date().toISOString();
+    const created = await this.encuestasRepository.create(normalizedDto, id, fecha);
     this.logger.log(
       JSON.stringify({
         event: "survey_created",
         surveyId: created.id,
-        hasSession: Boolean(dto.sessionId),
-        hasDescriptiveComments: Boolean(dto.descriptiveComments?.trim()),
-        hasAffectiveComments: Boolean(dto.affectiveComments?.trim()),
+        hasSession: Boolean(normalizedDto.sessionId),
+        hasDescriptiveComments: Boolean(normalizedDto.descriptiveComments),
+        hasAffectiveComments: Boolean(normalizedDto.affectiveComments),
       })
     );
     return created;
   }
 
   async createSession(dto: UpsertEncuestaSessionDto): Promise<EncuestaSessionRecord> {
+    const normalizedDto = this.normalizeSurveyTextFields(dto);
     const id = randomUUID();
-    const session = await this.encuestasRepository.createSession(id, dto);
+    const session = await this.encuestasRepository.createSession(id, normalizedDto);
     this.logger.log(
       JSON.stringify({
         event: "survey_session_created",
         sessionId: session.id,
-        currentStep: dto.currentStep ?? 1,
+        currentStep: normalizedDto.currentStep ?? 1,
       })
     );
     return session;
   }
 
   async updateSession(id: string, dto: UpsertEncuestaSessionDto): Promise<EncuestaSessionRecord> {
-    const session = await this.encuestasRepository.updateSession(id, dto);
+    const normalizedDto = this.normalizeSurveyTextFields(dto);
+    const session = await this.encuestasRepository.updateSession(id, normalizedDto);
     this.logger.log(
       JSON.stringify({
         event: "survey_session_updated",
         sessionId: session.id,
-        currentStep: dto.currentStep ?? null,
+        currentStep: normalizedDto.currentStep ?? null,
       })
     );
     return session;
+  }
+
+  private normalizeSurveyTextFields<T extends CreateEncuestaDto | UpsertEncuestaSessionDto>(dto: T): T {
+    const normalizeText = (value: string | undefined): string | undefined => {
+      if (typeof value !== "string") return undefined;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    };
+
+    return {
+      ...dto,
+      descriptiveComments: normalizeText(dto.descriptiveComments),
+      affectiveComments: normalizeText(dto.affectiveComments),
+      willingnessToPay: normalizeText(dto.willingnessToPay),
+    };
   }
 }

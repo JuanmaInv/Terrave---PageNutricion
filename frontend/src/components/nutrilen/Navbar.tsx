@@ -5,10 +5,9 @@ import { Menu, Moon, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { validarAdmin } from "@/lib/api";
+import { sincronizarUsuarioClerk, validarAdmin } from "@/lib/api";
+import { AUTH_ENABLED } from "@/lib/auth";
 import { TerraveMark } from "./TerraveMark";
-
-const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 
 const publicLinks = [
   { href: "/", label: "Inicio" },
@@ -44,15 +43,15 @@ function useDarkMode() {
   return { dark, toggle };
 }
 
-export function Navbar() {
-  if (TEST_AUTH_MODE) {
-    return <NavbarContent />;
+export function Navbar({ reserveSpace = true }: { reserveSpace?: boolean }) {
+  if (!AUTH_ENABLED) {
+    return <NavbarContent reserveSpace={reserveSpace} />;
   }
 
-  return <NavbarWithClerk />;
+  return <NavbarWithClerk reserveSpace={reserveSpace} />;
 }
 
-function NavbarWithClerk() {
+function NavbarWithClerk({ reserveSpace = true }: { reserveSpace?: boolean }) {
   const router = useRouter();
   const { signOut } = useClerk();
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -69,6 +68,7 @@ function NavbarWithClerk() {
 
       try {
         const token = await getToken();
+        await sincronizarUsuarioClerk(token ?? undefined);
         const result = await validarAdmin(token ?? undefined);
         if (isMounted) setIsAdminUser(result.isAdmin);
       } catch {
@@ -85,6 +85,7 @@ function NavbarWithClerk() {
 
   return (
     <NavbarContent
+      reserveSpace={reserveSpace}
       adminShortcut={
         <SignedIn>
           {isAdminUser ? (
@@ -116,9 +117,11 @@ function NavbarWithClerk() {
 }
 
 function NavbarContent({
+  reserveSpace = true,
   adminShortcut,
   adminActions,
 }: {
+  reserveSpace?: boolean;
   adminShortcut?: React.ReactNode;
   adminActions?: React.ReactNode;
 }) {
@@ -277,7 +280,7 @@ function NavbarContent({
           </div>
         </div>
       </header>
-      <div aria-hidden="true" className="h-[88px] md:h-[92px]" />
+      {reserveSpace ? <div aria-hidden="true" className="h-[88px] md:h-[92px]" /> : null}
     </>
   );
 }

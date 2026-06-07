@@ -10,9 +10,9 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import type { TooltipProps } from "recharts";
 import { ATTRIBUTES, type AttrKey } from "@/lib/nutrilen";
 import type { SensorialItem } from "./admin-dashboard.types";
-import { AdminChartTooltip } from "./AdminChartTooltip";
 import { AdminInfoTooltip } from "./AdminInfoTooltip";
 import { useAdminChartPalette } from "./useAdminChartPalette";
 
@@ -21,6 +21,43 @@ const ORANGE = "#F4B223";
 
 interface SensorialSectionProps {
   sensorial: SensorialItem[];
+}
+
+type RadarTooltipPayload = {
+  color?: string;
+  payload?: SensorialItem;
+  value?: number;
+};
+
+function SensorialRadarTooltip({ active, payload }: TooltipProps<number, string>) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  const item = payload[0] as RadarTooltipPayload;
+  const data = item.payload;
+
+  if (!data) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl border border-[color:var(--surface-border)]/55 bg-card px-3 py-2.5 text-xs shadow-[var(--shadow-card)]">
+      <p className="font-semibold text-[color:var(--surface-title)]">{data.metric}</p>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2 text-muted-foreground">
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ backgroundColor: item.color ?? MOSS }}
+          />
+          Valor
+        </span>
+        <span className="font-semibold text-[color:var(--surface-title)]">
+          {data.value.toFixed(1)} / 5
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export function SensorialSection({ sensorial }: SensorialSectionProps) {
@@ -94,7 +131,7 @@ export function SensorialSection({ sensorial }: SensorialSectionProps) {
                   strokeWidth={2}
                   isAnimationActive={false}
                 />
-                <Tooltip content={<AdminChartTooltip valueSuffix=" / 5" />} formatter={(v: number) => [v.toFixed(1), "Promedio"]} />
+                <Tooltip content={<SensorialRadarTooltip />} />
               </RadarChart>
             </ResponsiveContainer>
           </div>

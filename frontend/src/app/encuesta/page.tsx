@@ -48,8 +48,8 @@ import {
   validateSurveyStepOne,
   validateSurveySubmission,
 } from "@/lib/survey/survey-validation";
+import { AUTH_ENABLED } from "@/lib/auth";
 
-const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 const ATTR_ICONS: Record<AttrKey, React.ComponentType<{ className?: string }>> = {
   color: Palette,
   aroma: Wind,
@@ -85,12 +85,30 @@ interface LocalSurveyDraft {
   affectiveComments: string;
 }
 
+function readStoredSurveyDraft(): Partial<LocalSurveyDraft> | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawDraft = window.localStorage.getItem(SURVEY_DRAFT_STORAGE_KEY);
+  if (!rawDraft) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawDraft) as Partial<LocalSurveyDraft>;
+  } catch {
+    window.localStorage.removeItem(SURVEY_DRAFT_STORAGE_KEY);
+    return null;
+  }
+}
+
 function StepIndicator({ step }: { step: number }) {
   return (
-    <div className="mb-8" aria-label="Progreso de la encuesta" role="list">
+    <div className="survey-stepper-shell" aria-label="Progreso de la encuesta" role="list">
       <div className="mx-auto max-w-3xl px-2">
         <div
-          className="relative rounded-[2rem] border px-4 pb-4 pt-5 sm:px-8"
+          className="relative flex min-h-[112px] items-center rounded-[1.8rem] border px-4 py-4 sm:min-h-[120px] sm:px-7"
           style={{
             borderColor: "var(--survey-step-shell-border)",
             background: "var(--survey-step-shell-bg)",
@@ -98,11 +116,11 @@ function StepIndicator({ step }: { step: number }) {
           }}
         >
           <div
-            className="pointer-events-none absolute left-[13%] right-[13%] top-10 h-1 rounded-full"
+            className="pointer-events-none absolute left-[14%] right-[14%] top-8.5 h-1 rounded-full"
             style={{ backgroundColor: "var(--survey-step-track)" }}
           />
           <div
-            className="pointer-events-none absolute left-[13%] top-10 h-1 rounded-full transition-all duration-500"
+            className="pointer-events-none absolute left-[14%] top-8.5 h-1 rounded-full transition-all duration-500"
             style={{
               width:
                 step <= 1
@@ -114,8 +132,8 @@ function StepIndicator({ step }: { step: number }) {
                 "linear-gradient(90deg, color-mix(in oklab, var(--moss) 92%, white) 0%, var(--moss) 100%)",
             }}
           />
-          <div className="relative flex items-start justify-between gap-3">
-        {STEPS.map((s, i) => {
+          <div className="relative flex w-full items-start justify-between gap-3">
+        {STEPS.map((s) => {
           const done = step > s.id;
           const active = step === s.id;
           const circleStyle = done
@@ -153,15 +171,15 @@ function StepIndicator({ step }: { step: number }) {
               role="listitem"
               aria-current={active ? "step" : undefined}
             >
-              <div className="flex min-h-[78px] min-w-0 flex-col items-center gap-2">
+              <div className="flex min-h-[64px] min-w-0 flex-col items-center justify-start gap-1.5 sm:min-h-[70px]">
                 <div
-                  className="grid h-11 w-11 place-items-center rounded-full border-[3px] text-sm font-bold transition-all"
+                  className="grid h-10 w-10 place-items-center rounded-full border-[3px] text-sm font-bold transition-all sm:h-11 sm:w-11"
                   style={circleStyle}
                 >
                   {done ? <Check className="h-4 w-4" /> : s.id}
                 </div>
                 <span
-                  className={`max-w-[96px] text-[10px] font-extrabold uppercase tracking-[0.06em] sm:max-w-[132px] sm:text-[11px] ${
+                  className={`max-w-[96px] text-[9px] font-extrabold uppercase tracking-[0.05em] sm:max-w-[132px] sm:text-[10px] ${
                     active ? "dark:text-[color:var(--orange-yellow)]" : ""
                   }`}
                   style={labelStyle}
@@ -309,7 +327,7 @@ function SliderCard({
 }
 
 export default function EncuestaPage() {
-  if (TEST_AUTH_MODE) {
+  if (!AUTH_ENABLED) {
     return <EncuestaPageContent />;
   }
 
@@ -322,7 +340,7 @@ function EncuestaPageWithRedirect() {
   if (isCheckingRedirect) {
     return (
       <div className="flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-hidden bg-background text-foreground font-sans">
-        <Navbar />
+        <Navbar reserveSpace={false} />
         <PageLoader show />
       </div>
     );
@@ -332,7 +350,13 @@ function EncuestaPageWithRedirect() {
 }
 
 function EncuestaPageContent() {
-  const [step, setStep] = useState(1);
+  const [restoredDraft] = useState<Partial<LocalSurveyDraft> | null>(() => readStoredSurveyDraft());
+  const restoredDraftToastShownRef = useRef(false);
+  const [step, setStep] = useState(() =>
+    typeof restoredDraft?.step === "number"
+      ? Math.max(1, Math.min(3, restoredDraft.step))
+      : 1,
+  );
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSyncingSession, setIsSyncingSession] = useState(false);
@@ -359,12 +383,11 @@ function EncuestaPageContent() {
   const sessionIdRef = useRef<string | null>(null);
   const sessionCreateInFlightRef = useRef(false);
   const lastAutosaveErrorRef = useRef<string | null>(null);
-  const restoredDraftRef = useRef(false);
   const { show: showLoader, run: runWithLoader } = useNavLoader(1200);
 
   // Step 1
-  const [sex, setSex] = useState<Sex | null>(null);
-  const [diet, setDiet] = useState<Diet | null>(null);
+  const [sex, setSex] = useState<Sex | null>(restoredDraft?.sex ?? null);
+  const [diet, setDiet] = useState<Diet | null>(restoredDraft?.diet ?? null);
   const today = useMemo(
     () =>
       new Date().toLocaleDateString("es-AR", {
@@ -376,23 +399,25 @@ function EncuestaPageContent() {
   );
 
   // Step 2
-  const [attrs, setAttrs] = useState<Record<AttrKey, number>>({
-    color: 3,
-    aroma: 3,
-    firmeza: 3,
-    untuosidad: 3,
-    sabor_tostado: 3,
-    persistencia: 3,
-  });
-  const [descriptiveComments, setDescriptiveComments] = useState("");
+  const [attrs, setAttrs] = useState<Record<AttrKey, number>>(() => ({
+    color: restoredDraft?.attrs?.color ?? 3,
+    aroma: restoredDraft?.attrs?.aroma ?? 3,
+    firmeza: restoredDraft?.attrs?.firmeza ?? 3,
+    untuosidad: restoredDraft?.attrs?.untuosidad ?? 3,
+    sabor_tostado: restoredDraft?.attrs?.sabor_tostado ?? 3,
+    persistencia: restoredDraft?.attrs?.persistencia ?? 3,
+  }));
+  const [descriptiveComments, setDescriptiveComments] = useState(restoredDraft?.descriptiveComments ?? "");
 
   // Step 3
-  const [acceptance, setAcceptance] = useState<number | null>(null);
-  const [liked, setLiked] = useState<"si" | "no" | null>(null);
-  const [consumeAgain, setConsumeAgain] = useState<"si" | "no" | "tal_vez" | null>(null);
-  const [recommend, setRecommend] = useState(3);
-  const [willingnessToPay, setWillingnessToPay] = useState("");
-  const [affectiveComments, setAffectiveComments] = useState("");
+  const [acceptance, setAcceptance] = useState<number | null>(restoredDraft?.acceptance ?? null);
+  const [liked, setLiked] = useState<"si" | "no" | null>(restoredDraft?.liked ?? null);
+  const [consumeAgain, setConsumeAgain] = useState<"si" | "no" | "tal_vez" | null>(
+    restoredDraft?.consumeAgain ?? null,
+  );
+  const [recommend, setRecommend] = useState(restoredDraft?.recommend ?? 3);
+  const [willingnessToPay, setWillingnessToPay] = useState(restoredDraft?.willingnessToPay ?? "");
+  const [affectiveComments, setAffectiveComments] = useState(restoredDraft?.affectiveComments ?? "");
 
   useEffect(() => {
     sessionIdRef.current = sessionId;
@@ -441,45 +466,13 @@ function EncuestaPageContent() {
   );
 
   useEffect(() => {
-    if (restoredDraftRef.current || typeof window === "undefined") return;
-
-    restoredDraftRef.current = true;
-    const rawDraft = window.localStorage.getItem(SURVEY_DRAFT_STORAGE_KEY);
-    if (!rawDraft) return;
-
-    try {
-      const draft = JSON.parse(rawDraft) as Partial<LocalSurveyDraft>;
-
-      if (draft.sex) setSex(draft.sex);
-      if (draft.diet) setDiet(draft.diet);
-      if (draft.attrs) {
-        setAttrs((current) => ({
-          ...current,
-          ...draft.attrs,
-        }));
-      }
-      if (typeof draft.descriptiveComments === "string") {
-        setDescriptiveComments(draft.descriptiveComments);
-      }
-      if (typeof draft.acceptance === "number") setAcceptance(draft.acceptance);
-      if (draft.liked) setLiked(draft.liked);
-      if (draft.consumeAgain) setConsumeAgain(draft.consumeAgain);
-      if (typeof draft.recommend === "number") setRecommend(draft.recommend);
-      if (typeof draft.willingnessToPay === "string") {
-        setWillingnessToPay(draft.willingnessToPay);
-      }
-      if (typeof draft.affectiveComments === "string") {
-        setAffectiveComments(draft.affectiveComments);
-      }
-      if (typeof draft.step === "number") {
-        setStep(Math.max(1, Math.min(3, draft.step)));
-      }
-
-      toast.info("Se recupero tu borrador local de la encuesta.");
-    } catch {
-      window.localStorage.removeItem(SURVEY_DRAFT_STORAGE_KEY);
+    if (!restoredDraft || restoredDraftToastShownRef.current) {
+      return;
     }
-  }, []);
+
+    restoredDraftToastShownRef.current = true;
+    toast.info("Se recupero tu borrador local de la encuesta.");
+  }, [restoredDraft]);
 
   useEffect(() => {
     if (typeof window === "undefined" || submitted) return;
@@ -659,10 +652,13 @@ function EncuestaPageContent() {
 
   if (submitted) {
     return (
-      <div className="flex min-h-screen flex-col bg-background text-foreground font-sans">
-        <Navbar />
+      <div className="survey-success-page flex min-h-screen flex-col bg-background text-foreground font-sans">
+        <Navbar reserveSpace={false} />
         <PageLoader show={showLoader} />
-        <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-4 py-20 text-center sm:px-6">
+        <main
+          id="main-content"
+          className="survey-success-main mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-4 pt-40 pb-20 text-center sm:px-6 sm:pt-44 dark:pt-16 dark:sm:pt-20"
+        >
           <div className="nutri-success-motion relative">
             <div
               className="nutri-success-pulse absolute inset-0 rounded-full bg-[color:var(--moss)]/28"
@@ -722,28 +718,32 @@ function EncuestaPageContent() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground font-sans">
-      <Navbar />
+    <div className="nutri-flow flex min-h-screen flex-col bg-background text-foreground font-sans">
+      <Navbar reserveSpace={false} />
       <PageLoader show={showLoader} />
-      <main id="main-content" className="mx-auto w-full max-w-3xl flex-1 px-3 py-8 sm:px-6 lg:py-14">
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-5xl flex-1 px-3 pt-10 pb-10 sm:px-6 sm:pt-12 sm:pb-14 lg:pt-14 lg:pb-16"
+      >
         <div className="sr-only" aria-live="polite">
           {isSyncingSession ? "Guardando avance de la encuesta." : "Avance de encuesta sincronizado."}
         </div>
-        <header className="text-center">
-          <span className="survey-step-badge inline-block rounded-full px-4 py-1.5 text-xs font-semibold tracking-[0.02em]">
-            Evaluacion sensorial - Paso {step} de 3
-          </span>
-          <h1
-            className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl"
-            style={{ color: "var(--survey-page-title)" }}
-          >
-            {STEPS[step - 1].title}
-          </h1>
-        </header>
+        <section className="survey-hero mx-auto w-full max-w-4xl">
+          <header className="survey-title-wrap">
+            <h1
+              className="font-serif text-3xl font-semibold leading-[0.95] tracking-tight sm:text-4xl md:text-[3.2rem]"
+              style={{ color: "var(--survey-page-title)" }}
+            >
+              {STEPS[step - 1].title}
+            </h1>
+          </header>
 
-        <div className="mt-10">
-          <StepIndicator step={step} />
+          <div className="w-full">
+            <StepIndicator step={step} />
+          </div>
+        </section>
 
+        <div className="survey-form-wrap mx-auto w-full max-w-3xl">
           <form onSubmit={handleSubmit} className="space-y-4">
             {step === 1 && (
               <>

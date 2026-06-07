@@ -21,8 +21,7 @@ import {
 import { Navbar, Footer } from "@/components/nutrilen/Navbar";
 import { PageLoader } from "@/components/nutrilen/PageLoader";
 import { useRedirectAdminToDashboard } from "@/hooks/useRedirectAdminToDashboard";
-
-const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
+import { AUTH_ENABLED } from "@/lib/auth";
 
 const nutrients = [
   {
@@ -95,7 +94,7 @@ const ingredients = [
 ];
 
 export default function Index() {
-  if (TEST_AUTH_MODE) {
+  if (!AUTH_ENABLED) {
     return <IndexContent />;
   }
 
@@ -122,7 +121,7 @@ function IndexContent() {
 
   return (
     <div className="nutri-flow min-h-screen bg-background text-foreground font-sans">
-      <Navbar />
+      <Navbar reserveSpace={false} />
       <main id="main-content">
 
       {/* Hero */}

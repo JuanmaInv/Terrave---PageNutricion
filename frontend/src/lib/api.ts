@@ -306,6 +306,19 @@ export async function validarAdmin(
   return { isAdmin: false };
 }
 
+export async function sincronizarUsuarioClerk(
+  token?: string,
+): Promise<{ email: string; role: string; isAdmin: boolean } | null> {
+  if (!hasBackend() || !token) {
+    return null;
+  }
+
+  return await request("/admin/sync-user", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function exportarPDF(
   surveys: SurveyResponse[],
   context?: ReportContext,
@@ -335,21 +348,14 @@ export async function exportarExcel(
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
     } catch (error) {
-      if (ALLOW_LOCAL_FALLBACK) {
-        const { blob } = await ReportFactory.exportAs("excel", surveys, context);
-        console.error("Backend Excel export failed. Using local exporter fallback.", error);
-        return blob;
-      }
-      throw normalizeClientError(error, "No se pudo exportar el archivo Excel.");
+      const { blob } = await ReportFactory.exportAs("excel", surveys, context);
+      console.warn("Backend Excel export failed. Using local exporter fallback.", error);
+      return blob;
     }
   }
 
-  if (ALLOW_LOCAL_FALLBACK) {
-    const { blob } = await ReportFactory.exportAs("excel", surveys, context);
-    return blob;
-  }
-
-  throw new Error("Backend no configurado para exportacion Excel dinamica.");
+  const { blob } = await ReportFactory.exportAs("excel", surveys, context);
+  return blob;
 }
 
 export function descargarBlob(blob: Blob, filename: string): void {

@@ -18,15 +18,15 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { useSurveyFilters } from "@/hooks/useSurveyFilters";
 import { useSurveyResumen } from "@/hooks/useSurveyResumen";
 import { useSurveyStats } from "@/hooks/useSurveyStats";
+import { AUTH_DISABLED_REASON, AUTH_ENABLED } from "@/lib/auth";
 import {
   descargarBlob,
   exportarExcel,
   exportarPDF,
   getUserFacingErrorMessage,
+  sincronizarUsuarioClerk,
   validarAdmin,
 } from "@/lib/api";
-
-const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 
 export default function AdminRoute() {
   return (
@@ -37,7 +37,7 @@ export default function AdminRoute() {
 }
 
 export function AdminGate() {
-  if (TEST_AUTH_MODE) {
+  if (!AUTH_ENABLED) {
     return <AdminTestGate />;
   }
 
@@ -94,6 +94,12 @@ function AdminSignInState() {
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Inicia sesion para acceder a las estadisticas del proyecto.
             </p>
+            {AUTH_DISABLED_REASON === "missing-clerk-key" ? (
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                La autenticacion esta desactivada porque falta una `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+                valida en el entorno local.
+              </p>
+            ) : null}
           </div>
           <div className="mx-auto flex w-full justify-center">
             <SignIn
@@ -145,6 +151,12 @@ function AdminTestGate() {
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Inicia sesion para acceder a las estadisticas del proyecto.
             </p>
+            {AUTH_DISABLED_REASON === "missing-clerk-key" ? (
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                La autenticacion esta desactivada porque falta una `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+                valida en el entorno local.
+              </p>
+            ) : null}
           </div>
         </main>
         <Footer />
@@ -171,6 +183,7 @@ export function AdminAuthorized() {
       if (!isLoaded || !isSignedIn) return;
       try {
         const token = await getToken();
+        await sincronizarUsuarioClerk(token ?? undefined);
         const result = await validarAdmin(token ?? undefined);
         if (isMounted) setHasAccess(result.isAdmin);
       } catch {
@@ -231,7 +244,7 @@ export function ClientOnly({
 }
 
 export function AdminPage() {
-  return TEST_AUTH_MODE ? <AdminPageTestMode /> : <AdminPageWithClerk />;
+  return AUTH_ENABLED ? <AdminPageWithClerk /> : <AdminPageTestMode />;
 }
 
 function AdminPageWithClerk() {

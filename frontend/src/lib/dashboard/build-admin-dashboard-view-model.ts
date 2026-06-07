@@ -116,12 +116,10 @@ export function buildAdminDashboardViewModel(
 
   const descriptiveCommentsList = data
     .filter((survey) => survey.descriptiveComments && survey.descriptiveComments.trim().length > 0)
-    .slice(-12)
     .reverse() as SurveyResponse[];
 
   const affectiveCommentsList = data
     .filter((survey) => survey.affectiveComments && survey.affectiveComments.trim().length > 0)
-    .slice(-12)
     .reverse() as SurveyResponse[];
 
   const sortedPriceAmounts = [...priceResponses]

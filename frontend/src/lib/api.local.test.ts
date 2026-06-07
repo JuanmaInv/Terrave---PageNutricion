@@ -54,4 +54,42 @@ describe("Fallback local de la API", () => {
       "Se perdio la conexion con el servidor. Verifica tu internet e intenta nuevamente.",
     );
   });
+
+  it("debe exportar Excel localmente si falla el backend", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3000";
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => JSON.stringify({ message: "Excel export failed" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = await import("./api");
+    const blob = await api.exportarExcel([
+      {
+        id: "1",
+        date: "2026-06-01T10:00:00.000Z",
+        sex: "femenino",
+        diet: "vegano",
+        attrs: {
+          color: 3,
+          aroma: 3,
+          firmeza: 3,
+          untuosidad: 3,
+          sabor_tostado: 3,
+          persistencia: 3,
+        },
+        descriptiveComments: "",
+        acceptance: 3,
+        liked: "si",
+        consumeAgain: "si",
+        recommend: 3,
+        willingnessToPay: "4000",
+        affectiveComments: "",
+      },
+    ]);
+
+    expect(blob).toBeInstanceOf(Blob);
+    vi.unstubAllGlobals();
+  });
 });

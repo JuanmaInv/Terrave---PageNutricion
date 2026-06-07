@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { obtenerResumenDashboard, type DashboardSummary } from "@/lib/api";
+import {
+  getUserFacingErrorMessage,
+  obtenerResumenDashboard,
+  type DashboardSummary,
+} from "@/lib/api";
 import { type SurveyFilters } from "./useSurveyFilters";
 
 const EMPTY_SUMMARY: DashboardSummary = {
@@ -46,11 +50,7 @@ export function useSurveyResumen(
 
       setSummary(nextSummary);
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "No se pudo cargar el resumen del dashboard.",
-      );
+      toast.error(getUserFacingErrorMessage(error, "No se pudo cargar el resumen del dashboard."));
     } finally {
       setIsLoading(false);
     }

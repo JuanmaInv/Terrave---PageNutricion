@@ -1,7 +1,7 @@
-const { UnauthorizedException } = require("@nestjs/common");
-const { AdminService } = require("../../dist/src/admin/admin.service.js");
+import { UnauthorizedException } from "@nestjs/common";
+import { AdminService } from "../../src/admin/admin.service";
 
-describe("AdminService", () => {
+describe("Servicio de administracion", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -78,6 +78,23 @@ describe("AdminService", () => {
     process.env.CLERK_SECRET_KEY = originalSecret;
   });
 
+  it("debe rechazar la validación cuando el email principal viene vacío", async () => {
+    const originalSecret = process.env.CLERK_SECRET_KEY;
+    process.env.CLERK_SECRET_KEY = "sk_test_123";
+    const service = new AdminService({ query: async () => ({ rowCount: 0, rows: [] }) });
+    service.verifyClerkJwt = vi.fn().mockResolvedValue({ sub: "user_123" });
+    service.buildClerkClient = vi.fn(() => ({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          primaryEmailAddress: { emailAddress: "" },
+        }),
+      },
+    }));
+
+    await expect(service.validateAdminToken("token")).rejects.toThrow(/no primary email/);
+    process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
   it("debe rechazar la validación cuando el usuario no es admin", async () => {
     const originalSecret = process.env.CLERK_SECRET_KEY;
     process.env.CLERK_SECRET_KEY = "sk_test_123";
@@ -122,6 +139,16 @@ describe("AdminService", () => {
       email: "admin@example.com",
     });
     process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
+  it("debe devolver false cuando rowCount no viene informado", async () => {
+    const service = new AdminService({
+      async query() {
+        return { rows: [{ id: "user-1" }] };
+      },
+    });
+
+    await expect(service.isAdminInDatabase("admin@example.com")).resolves.toBe(false);
   });
 
   it("debe exponer un cliente de Clerk al construirlo con la secret configurada", () => {

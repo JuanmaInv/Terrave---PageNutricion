@@ -1,8 +1,6 @@
-require("reflect-metadata");
-const { plainToInstance } = require("class-transformer");
-const { validateSync } = require("class-validator");
-
-const { CreateEncuestaDto } = require("../../dist/src/encuestas/dto/create-encuesta.dto.js");
+import { plainToInstance } from "class-transformer";
+import { validateSync } from "class-validator";
+import { CreateEncuestaDto } from "../../src/encuestas/dto/create-encuesta.dto";
 
 function buildValidPayload() {
   return {
@@ -71,5 +69,27 @@ describe("CreateEncuestaDto", () => {
 
     expect(errors.some((error) => error.property === "liked")).toBe(true);
     expect(errors.some((error) => error.property === "consumeAgain")).toBe(true);
+  });
+
+  it("debe rechazar una fecha no ISO y campos opcionales vacíos", () => {
+    const errors = validate({
+      ...buildValidPayload(),
+      date: "03/06/2026",
+      sessionId: "",
+      clientSessionKey: "",
+    });
+
+    expect(errors.some((error) => error.property === "date")).toBe(true);
+    expect(errors.some((error) => error.property === "sessionId")).toBe(true);
+    expect(errors.some((error) => error.property === "clientSessionKey")).toBe(true);
+  });
+
+  it("debe rechazar recommend fuera de rango", () => {
+    const errors = validate({
+      ...buildValidPayload(),
+      recommend: 0,
+    });
+
+    expect(errors.some((error) => error.property === "recommend")).toBe(true);
   });
 });

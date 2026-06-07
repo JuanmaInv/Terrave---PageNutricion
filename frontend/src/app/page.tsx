@@ -142,6 +142,7 @@ function IndexContent() {
             alt="Medallon de lenteja servido en plato de ceramica"
             placeholder="blur"
             priority
+            fetchPriority="high"
             quality={70}
             sizes="100vw"
             className="hero-image-pan h-[72vh] min-h-[420px] w-full object-cover object-center sm:h-[78vh] sm:min-h-[560px]"

@@ -1,6 +1,5 @@
-const { UnauthorizedException } = require("@nestjs/common");
-
-const { AdminGuard } = require("../../dist/src/admin/guards/admin.guard.js");
+import { UnauthorizedException } from "@nestjs/common";
+import { AdminGuard } from "../../src/admin/guards/admin.guard";
 
 function buildExecutionContext(request) {
   return {
@@ -14,7 +13,7 @@ function buildExecutionContext(request) {
   };
 }
 
-describe("AdminGuard", () => {
+describe("Guard de administracion", () => {
   it("debe permitir acceso cuando el token es válido y el usuario es admin", async () => {
     const adminService = {
       getTokenFromAuthorization(authorization) {

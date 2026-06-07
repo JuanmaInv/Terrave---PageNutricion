@@ -90,7 +90,7 @@ function NavbarWithClerk() {
           {isAdminUser ? (
             <Link
               href="/administrador"
-              className="inline-flex items-center justify-center rounded-full border border-white/12 bg-[color:var(--moss)] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
+              className="inline-flex items-center justify-center rounded-full border border-white/12 bg-[#a7aa3f] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
             >
               Administracion
             </Link>
@@ -139,40 +139,41 @@ function NavbarContent({
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <header
-      className="sticky top-0 z-40 border-b border-white/8 shadow-[0_24px_64px_-48px_rgba(39,18,11,0.95)]"
-      style={{
-        background:
-          "linear-gradient(90deg, var(--brand-shell-start) 0%, var(--brand-shell-mid) 52%, var(--brand-shell-end) 100%)",
-      }}
-    >
-      <div className="pointer-events-none absolute inset-0 opacity-75">
-        <div
-          className="absolute -left-16 top-0 h-24 w-40 rounded-full blur-3xl"
-          style={{ background: "var(--brand-glow-a)" }}
-        />
-        <div
-          className="absolute right-0 top-2 h-24 w-40 rounded-full blur-3xl"
-          style={{ background: "var(--brand-glow-b)" }}
-        />
-      </div>
+    <>
+      <header
+        className="fixed inset-x-0 top-0 z-[90] border-b border-white/8 shadow-[0_24px_64px_-48px_rgba(39,18,11,0.95)] backdrop-blur-md supports-[backdrop-filter]:backdrop-blur-md"
+        style={{
+          background:
+            "linear-gradient(90deg, var(--brand-shell-start) 0%, var(--brand-shell-mid) 52%, var(--brand-shell-end) 100%)",
+        }}
+      >
+        <div className="pointer-events-none absolute inset-0 opacity-75">
+          <div
+            className="absolute -left-16 top-0 h-24 w-40 rounded-full blur-3xl"
+            style={{ background: "var(--brand-glow-a)" }}
+          />
+          <div
+            className="absolute right-0 top-2 h-24 w-40 rounded-full blur-3xl"
+            style={{ background: "var(--brand-glow-b)" }}
+          />
+        </div>
 
-      <div className="relative mx-auto max-w-6xl px-4 py-3 sm:px-6">
-        <div className="flex min-h-16 items-center justify-between gap-4">
+        <div className="relative mx-auto max-w-6xl px-4 py-3 sm:px-6">
+          <div className="flex min-h-16 items-center justify-between gap-4">
           <Link
             href={isAdmin ? "/administrador" : "/"}
             className="group flex min-w-0 items-center gap-3"
             onClick={closeMobileMenu}
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[color:var(--moss)] shadow-[0_16px_28px_-18px_rgba(160,163,49,0.95)] transition group-hover:scale-105">
-              <TerraveMark className="h-5 w-5 text-white" />
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#a7aa3f] shadow-[0_16px_28px_-18px_rgba(160,163,49,0.95)] transition group-hover:scale-105 dark:ring-1 dark:ring-[#d8c25f]/18 dark:shadow-[0_18px_34px_-16px_rgba(184,196,88,0.95)]">
+              <TerraveMark className="h-6 w-6 text-white drop-shadow-[0_1px_2px_rgba(39,18,11,0.28)]" strokeWidth={3.2} />
             </span>
             <span className="min-w-0">
-              <span className="block truncate font-serif text-2xl font-semibold tracking-tight text-[color:var(--cream)] drop-shadow-[0_1px_1px_rgba(39,18,11,0.3)]">
+              <span className="block truncate font-serif text-2xl font-semibold tracking-tight text-[color:var(--cream)] drop-shadow-[0_1px_1px_rgba(39,18,11,0.3)] dark:text-[#cfd56d] dark:drop-shadow-[0_2px_14px_rgba(184,196,88,0.34)]">
                 TERRAVE
               </span>
               {isAdmin ? (
-                <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[color:var(--cream)]/74">
+                <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[color:var(--cream)]/74 dark:text-[#bcc45c]">
                   Panel administrativo
                 </span>
               ) : null}
@@ -192,8 +193,8 @@ function NavbarContent({
                     href={link.href}
                     className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                       active
-                        ? "bg-[color:var(--moss)] text-white shadow-[0_18px_36px_-20px_rgba(160,163,49,0.95)]"
-                        : "bg-white/6 text-[color:var(--cream)]/92 hover:-translate-y-0.5 hover:bg-white/12 hover:text-[color:var(--cream)]"
+                        ? "bg-[color:var(--moss)] text-white shadow-[0_18px_36px_-20px_rgba(160,163,49,0.95)] dark:bg-[#a7aa3f] dark:shadow-[0_18px_40px_-18px_rgba(160,163,49,0.98)]"
+                        : "bg-white/6 text-[color:var(--cream)]/92 hover:-translate-y-0.5 hover:bg-white/12 hover:text-[color:var(--cream)] dark:border dark:border-[#a7aa3f]/55 dark:bg-[#66552b]/42 dark:text-[#f2f0d8] dark:shadow-[0_14px_28px_-24px_rgba(184,196,88,0.8)] dark:hover:bg-[#7b6832]/56 dark:hover:text-white"
                     }`}
                   >
                     {link.label}
@@ -208,7 +209,7 @@ function NavbarContent({
               type="button"
               onClick={toggle}
               aria-label={mounted && dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-              className="grid h-11 w-11 place-items-center rounded-full border border-white/12 bg-[color:var(--moss)] text-white shadow-[0_20px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
+              className="grid h-11 w-11 place-items-center rounded-full border border-white/12 bg-[#a7aa3f] text-white shadow-[0_20px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55 dark:border-[#d8c25f]/45"
             >
               {mounted && dark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
@@ -219,7 +220,7 @@ function NavbarContent({
               type="button"
               onClick={toggle}
               aria-label={mounted && dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-              className="grid h-11 w-11 place-items-center rounded-full border border-white/12 bg-[color:var(--moss)] text-white shadow-[0_18px_34px_-22px_rgba(160,163,49,0.92)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
+              className="grid h-11 w-11 place-items-center rounded-full border border-white/12 bg-[#a7aa3f] text-white shadow-[0_18px_34px_-22px_rgba(160,163,49,0.92)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55 dark:border-[#d8c25f]/45"
             >
               {mounted && dark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
@@ -228,54 +229,56 @@ function NavbarContent({
               onClick={() => setMobileMenuOpen((current) => !current)}
               aria-label={mobileMenuOpen ? "Cerrar menu" : "Abrir menu"}
               aria-expanded={mobileMenuOpen}
-              className="grid h-11 w-11 place-items-center rounded-full border border-white/12 bg-[color:var(--moss)] text-white shadow-[0_18px_34px_-22px_rgba(160,163,49,0.92)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
+              className="grid h-11 w-11 place-items-center rounded-full border border-white/12 bg-[#a7aa3f] text-white shadow-[0_18px_34px_-22px_rgba(160,163,49,0.92)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55 dark:border-[#d8c25f]/45"
             >
               {mobileMenuOpen ? <X size={19} /> : <Menu size={19} />}
             </button>
           </div>
         </div>
 
-        <div
-          className={`overflow-hidden transition-all duration-300 md:hidden ${
-            mobileMenuOpen ? "max-h-96 pt-3 opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <nav
-            aria-label="Menu movil"
-            className="flex flex-col gap-2 rounded-3xl border border-white/10 bg-black/12 p-3 backdrop-blur-sm"
+          <div
+            className={`overflow-hidden transition-all duration-300 md:hidden ${
+              mobileMenuOpen ? "max-h-96 pt-3 opacity-100" : "max-h-0 opacity-0"
+            }`}
           >
-            {links.map((link) => {
-              const active =
-                pathname === link.href ||
-                (link.href !== "/" && pathname.startsWith(link.href));
+            <nav
+              aria-label="Menu movil"
+              className="flex flex-col gap-2 rounded-3xl border border-white/10 bg-black/12 p-3 backdrop-blur-sm"
+            >
+              {links.map((link) => {
+                const active =
+                  pathname === link.href ||
+                  (link.href !== "/" && pathname.startsWith(link.href));
 
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={closeMobileMenu}
-                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                    active
-                      ? "bg-[color:var(--moss)] text-white shadow-[0_18px_36px_-22px_rgba(160,163,49,0.95)]"
-                      : "bg-white/5 text-[color:var(--cream)]/94 hover:bg-white/10 hover:text-[color:var(--cream)]"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={closeMobileMenu}
+                    className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                      active
+                        ? "bg-[color:var(--moss)] text-white shadow-[0_18px_36px_-22px_rgba(160,163,49,0.95)] dark:bg-[#a7aa3f] dark:shadow-[0_18px_40px_-18px_rgba(160,163,49,0.98)]"
+                        : "bg-white/5 text-[color:var(--cream)]/94 hover:bg-white/10 hover:text-[color:var(--cream)] dark:border dark:border-[#a7aa3f]/55 dark:bg-[#66552b]/44 dark:text-[#f2f0d8] dark:shadow-[0_14px_28px_-24px_rgba(184,196,88,0.8)] dark:hover:bg-[#7b6832]/58 dark:hover:text-white"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
 
-            {!isAdmin ? (
-              <div onClick={closeMobileMenu} className="contents">
-                {adminShortcut ?? null}
-              </div>
-            ) : null}
+              {!isAdmin ? (
+                <div onClick={closeMobileMenu} className="contents">
+                  {adminShortcut ?? null}
+                </div>
+              ) : null}
 
-            {isAdmin ? adminActions ?? null : null}
-          </nav>
+              {isAdmin ? adminActions ?? null : null}
+            </nav>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+      <div aria-hidden="true" className="h-[88px] md:h-[92px]" />
+    </>
   );
 }
 

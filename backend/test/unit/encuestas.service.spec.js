@@ -1,4 +1,4 @@
-const { EncuestasService } = require("../../dist/src/encuestas/encuestas.service.js");
+import { EncuestasService } from "../../src/encuestas/encuestas.service";
 
 function buildRepositoryMock() {
   return {
@@ -106,6 +106,21 @@ describe("EncuestasService", () => {
     expect(session.id).toBe(repository.createSessionCalls[0].id);
   });
 
+  it("debe crear una sesión aunque currentStep no venga informado", async () => {
+    const repository = buildRepositoryMock();
+    const service = new EncuestasService(repository);
+    const dto = {
+      clientSessionKey: "client-2",
+      sex: "otro",
+    };
+
+    const session = await service.createSession(dto);
+
+    expect(repository.createSessionCalls).toHaveLength(1);
+    expect(repository.createSessionCalls[0].dto).toBe(dto);
+    expect(session.id).toBe(repository.createSessionCalls[0].id);
+  });
+
   it("debe actualizar una sesión usando el id provisto", async () => {
     const repository = buildRepositoryMock();
     const service = new EncuestasService(repository);
@@ -136,5 +151,33 @@ describe("EncuestasService", () => {
     expect(repository.updateSessionCalls).toHaveLength(1);
     expect(repository.updateSessionCalls[0].id).toBe("session-999");
     expect(session.id).toBe("session-999");
+  });
+
+  it("debe soportar comentarios vacíos o solo espacios sin romper el guardado", async () => {
+    const repository = buildRepositoryMock();
+    const service = new EncuestasService(repository);
+    const dto = {
+      sex: "masculino",
+      diet: "otro",
+      attrs: {
+        color: 3,
+        aroma: 3,
+        firmeza: 3,
+        untuosidad: 3,
+        sabor_tostado: 3,
+        persistencia: 3,
+      },
+      descriptiveComments: "   ",
+      acceptance: 3,
+      liked: "no",
+      consumeAgain: "tal_vez",
+      recommend: 3,
+      affectiveComments: "",
+    };
+
+    const created = await service.create(dto);
+
+    expect(repository.createCalls).toHaveLength(1);
+    expect(created.id).toBeTruthy();
   });
 });

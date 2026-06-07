@@ -39,6 +39,7 @@ import {
   actualizarSesionEncuesta,
   crearSesionEncuesta,
   enviarEncuesta,
+  getUserFacingErrorMessage,
   type SurveySessionDraft,
 } from "@/lib/api";
 import { useRedirectAdminToDashboard } from "@/hooks/useRedirectAdminToDashboard";
@@ -66,54 +67,113 @@ const STEPS = [
 
 const SURVEY_SESSION_STORAGE_KEY = "nutrilen.activeSurveySessionId";
 const SURVEY_CLIENT_SESSION_KEY = "nutrilen.clientSurveySessionKey";
+const SURVEY_DRAFT_STORAGE_KEY = "nutrilen.surveyDraft";
 const AUTOSAVE_DELAY_MS = 800;
 const CAN_TRACK_PROGRESS = Boolean(process.env.NEXT_PUBLIC_API_URL?.trim());
+
+interface LocalSurveyDraft {
+  step: number;
+  sex: Sex | null;
+  diet: Diet | null;
+  attrs: Record<AttrKey, number>;
+  descriptiveComments: string;
+  acceptance: number | null;
+  liked: "si" | "no" | null;
+  consumeAgain: "si" | "no" | "tal_vez" | null;
+  recommend: number;
+  willingnessToPay: string;
+  affectiveComments: string;
+}
 
 function StepIndicator({ step }: { step: number }) {
   return (
     <div className="mb-8" aria-label="Progreso de la encuesta" role="list">
-      <div className="flex items-center justify-between gap-2">
+      <div className="mx-auto max-w-3xl px-2">
+        <div
+          className="relative rounded-[2rem] border px-4 pb-4 pt-5 sm:px-8"
+          style={{
+            borderColor: "var(--survey-step-shell-border)",
+            background: "var(--survey-step-shell-bg)",
+            boxShadow: "var(--survey-step-shell-shadow)",
+          }}
+        >
+          <div
+            className="pointer-events-none absolute left-[13%] right-[13%] top-10 h-1 rounded-full"
+            style={{ backgroundColor: "var(--survey-step-track)" }}
+          />
+          <div
+            className="pointer-events-none absolute left-[13%] top-10 h-1 rounded-full transition-all duration-500"
+            style={{
+              width:
+                step <= 1
+                  ? "0%"
+                  : step === 2
+                    ? "37%"
+                    : "74%",
+              background:
+                "linear-gradient(90deg, color-mix(in oklab, var(--moss) 92%, white) 0%, var(--moss) 100%)",
+            }}
+          />
+          <div className="relative flex items-start justify-between gap-3">
         {STEPS.map((s, i) => {
           const done = step > s.id;
           const active = step === s.id;
+          const circleStyle = done
+            ? {
+                borderColor: "var(--moss)",
+                backgroundColor: "var(--moss)",
+                color: "var(--primary-foreground)",
+                boxShadow:
+                  "0 12px 24px -18px color-mix(in oklab, var(--moss) 70%, transparent)",
+              }
+              : active
+              ? {
+                  borderColor: "var(--pumpkin)",
+                  backgroundColor: "var(--pumpkin)",
+                  color: "#ffffff",
+                  boxShadow: "var(--shadow-soft)",
+                }
+              : {
+                  borderColor: "var(--survey-step-inactive-border)",
+                  backgroundColor:
+                    "color-mix(in oklab, var(--survey-step-inactive-bg) 88%, white 12%)",
+                  color: "var(--survey-step-inactive-text)",
+                  boxShadow:
+                    "0 10px 20px -18px color-mix(in oklab, var(--vandyke) 35%, transparent)",
+                };
+          const labelStyle = active
+            ? { color: "var(--pumpkin)" }
+            : {
+              color: "var(--survey-step-inactive-label)",
+            };
           return (
             <div
               key={s.id}
-              className="flex flex-1 items-center gap-2"
+              className="relative z-10 flex w-1/3 flex-col items-center text-center"
               role="listitem"
               aria-current={active ? "step" : undefined}
             >
-              <div className="flex flex-col items-center gap-1.5">
+              <div className="flex min-h-[78px] min-w-0 flex-col items-center gap-2">
                 <div
-                  className={`grid h-9 w-9 place-items-center rounded-full border-2 text-sm font-semibold transition-all ${
-                    done
-                      ? "border-[color:var(--moss)] bg-[color:var(--moss)] text-[color:var(--primary-foreground)]"
-                      : active
-                        ? "border-[color:var(--pumpkin)] bg-[color:var(--pumpkin)] text-white shadow-[var(--shadow-soft)]"
-                        : "border-border bg-card text-muted-foreground"
-                  }`}
+                  className="grid h-11 w-11 place-items-center rounded-full border-[3px] text-sm font-bold transition-all"
+                  style={circleStyle}
                 >
                   {done ? <Check className="h-4 w-4" /> : s.id}
                 </div>
                 <span
-                  className={`hidden text-[11px] font-medium uppercase tracking-wide sm:block ${
-                    active ? "text-[color:var(--vandyke)]" : "text-muted-foreground"
+                  className={`max-w-[96px] text-[10px] font-extrabold uppercase tracking-[0.06em] sm:max-w-[132px] sm:text-[11px] ${
+                    active ? "dark:text-[color:var(--orange-yellow)]" : ""
                   }`}
+                  style={labelStyle}
                 >
                   {s.title}
                 </span>
               </div>
-              {i < STEPS.length - 1 && (
-                <div className="mb-5 h-0.5 flex-1 overflow-hidden rounded-full bg-border">
-                  <div
-                    className="h-full bg-[color:var(--moss)] transition-all duration-500"
-                    style={{ width: step > s.id ? "100%" : "0%" }}
-                  />
-                </div>
-              )}
             </div>
           );
         })}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -298,6 +358,8 @@ function EncuestaPageContent() {
   });
   const sessionIdRef = useRef<string | null>(null);
   const sessionCreateInFlightRef = useRef(false);
+  const lastAutosaveErrorRef = useRef<string | null>(null);
+  const restoredDraftRef = useRef(false);
   const { show: showLoader, run: runWithLoader } = useNavLoader(1200);
 
   // Step 1
@@ -379,6 +441,86 @@ function EncuestaPageContent() {
   );
 
   useEffect(() => {
+    if (restoredDraftRef.current || typeof window === "undefined") return;
+
+    restoredDraftRef.current = true;
+    const rawDraft = window.localStorage.getItem(SURVEY_DRAFT_STORAGE_KEY);
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft) as Partial<LocalSurveyDraft>;
+
+      if (draft.sex) setSex(draft.sex);
+      if (draft.diet) setDiet(draft.diet);
+      if (draft.attrs) {
+        setAttrs((current) => ({
+          ...current,
+          ...draft.attrs,
+        }));
+      }
+      if (typeof draft.descriptiveComments === "string") {
+        setDescriptiveComments(draft.descriptiveComments);
+      }
+      if (typeof draft.acceptance === "number") setAcceptance(draft.acceptance);
+      if (draft.liked) setLiked(draft.liked);
+      if (draft.consumeAgain) setConsumeAgain(draft.consumeAgain);
+      if (typeof draft.recommend === "number") setRecommend(draft.recommend);
+      if (typeof draft.willingnessToPay === "string") {
+        setWillingnessToPay(draft.willingnessToPay);
+      }
+      if (typeof draft.affectiveComments === "string") {
+        setAffectiveComments(draft.affectiveComments);
+      }
+      if (typeof draft.step === "number") {
+        setStep(Math.max(1, Math.min(3, draft.step)));
+      }
+
+      toast.info("Se recupero tu borrador local de la encuesta.");
+    } catch {
+      window.localStorage.removeItem(SURVEY_DRAFT_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || submitted) return;
+
+    if (!hasStartedSurvey) {
+      window.localStorage.removeItem(SURVEY_DRAFT_STORAGE_KEY);
+      return;
+    }
+
+    const draftToPersist: LocalSurveyDraft = {
+      step,
+      sex,
+      diet,
+      attrs,
+      descriptiveComments,
+      acceptance,
+      liked,
+      consumeAgain,
+      recommend,
+      willingnessToPay,
+      affectiveComments,
+    };
+
+    window.localStorage.setItem(SURVEY_DRAFT_STORAGE_KEY, JSON.stringify(draftToPersist));
+  }, [
+    acceptance,
+    affectiveComments,
+    attrs,
+    descriptiveComments,
+    diet,
+    hasStartedSurvey,
+    liked,
+    recommend,
+    sex,
+    step,
+    submitted,
+    consumeAgain,
+    willingnessToPay,
+  ]);
+
+  useEffect(() => {
     if (!CAN_TRACK_PROGRESS || !clientSessionKey || !hasStartedSurvey || submitted) return;
 
     let cancelled = false;
@@ -396,12 +538,24 @@ function EncuestaPageContent() {
           sessionIdRef.current = created.id;
           setSessionId(created.id);
           window.localStorage.setItem(SURVEY_SESSION_STORAGE_KEY, created.id);
+          lastAutosaveErrorRef.current = null;
           return;
         }
 
         await actualizarSesionEncuesta(currentSessionId, sessionDraft);
+        lastAutosaveErrorRef.current = null;
       } catch (error) {
-        console.error("Survey session autosave failed:", error);
+        const detail = getUserFacingErrorMessage(
+          error,
+          "No se pudo guardar tu progreso temporalmente.",
+        );
+
+        console.warn(`Survey session autosave failed: ${detail}`);
+
+        if (lastAutosaveErrorRef.current !== detail) {
+          lastAutosaveErrorRef.current = detail;
+          toast.error(`No se pudo guardar tu progreso. ${detail}`);
+        }
       } finally {
         sessionCreateInFlightRef.current = false;
         setIsSyncingSession(false);
@@ -486,15 +640,16 @@ function EncuestaPageContent() {
           window.localStorage.setItem(SURVEY_CLIENT_SESSION_KEY, nextClientSessionKey);
           setClientSessionKey(nextClientSessionKey);
         }
+        window.localStorage.removeItem(SURVEY_DRAFT_STORAGE_KEY);
         sessionIdRef.current = null;
         sessionCreateInFlightRef.current = false;
+        lastAutosaveErrorRef.current = null;
         setSessionId(null);
         toast.success("Evaluación enviada correctamente");
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (error) {
-        const detail =
-          error instanceof Error ? error.message : "Error desconocido al enviar la encuesta.";
+        const detail = getUserFacingErrorMessage(error, "Error desconocido al enviar la encuesta.");
         toast.error(`No se pudo enviar la encuesta. ${detail}`);
       } finally {
         setIsSubmitting(false);
@@ -575,10 +730,13 @@ function EncuestaPageContent() {
           {isSyncingSession ? "Guardando avance de la encuesta." : "Avance de encuesta sincronizado."}
         </div>
         <header className="text-center">
-          <span className="inline-block rounded-full bg-[color:var(--orange-yellow)]/25 px-3 py-1 text-xs font-medium text-[color:var(--vandyke)]">
+          <span className="survey-step-badge inline-block rounded-full px-4 py-1.5 text-xs font-semibold tracking-[0.02em]">
             Evaluacion sensorial - Paso {step} de 3
           </span>
-          <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight text-[color:var(--vandyke)] sm:text-4xl">
+          <h1
+            className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl"
+            style={{ color: "var(--survey-page-title)" }}
+          >
             {STEPS[step - 1].title}
           </h1>
         </header>
@@ -671,7 +829,11 @@ function EncuestaPageContent() {
                     value={willingnessToPay}
                     onChange={(e) => setWillingnessToPay(sanitizeWillingnessToPay(e.target.value))}
                     placeholder="Ej.: 4500"
-                    className="mt-3 w-full rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-muted-foreground/70 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30"
+                    className="mt-3 w-full rounded-2xl border border-border bg-background/80 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-[color:var(--vandyke)]/55 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30 dark:border-white/14 dark:bg-white/8 dark:text-[color:var(--cream)] dark:placeholder:text-[color:var(--cream)]/48"
+                    style={{
+                      color: "var(--survey-input-text)",
+                      backgroundColor: "var(--survey-input-bg)",
+                    }}
                   />
                 </Card>
 
@@ -689,7 +851,11 @@ function EncuestaPageContent() {
                     onChange={(e) => setDescriptiveComments(e.target.value)}
                     rows={4}
                     placeholder="Notas adicionales sobre el perfil sensorial…"
-                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-muted-foreground/70 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30"
+                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-background/80 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-[color:var(--vandyke)]/55 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30 dark:border-white/14 dark:bg-white/8 dark:text-[color:var(--cream)] dark:placeholder:text-[color:var(--cream)]/48"
+                    style={{
+                      color: "var(--survey-input-text)",
+                      backgroundColor: "var(--survey-input-bg)",
+                    }}
                   />
                 </Card>
               </>
@@ -870,7 +1036,11 @@ function EncuestaPageContent() {
                     onChange={(e) => setAffectiveComments(e.target.value)}
                     rows={4}
                     placeholder="Tu experiencia general con el producto…"
-                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-muted-foreground/70 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30"
+                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-background/80 px-4 py-3 text-sm text-[color:var(--vandyke)] placeholder:text-[color:var(--vandyke)]/55 focus:border-[color:var(--pumpkin)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/30 dark:border-white/14 dark:bg-white/8 dark:text-[color:var(--cream)] dark:placeholder:text-[color:var(--cream)]/48"
+                    style={{
+                      color: "var(--survey-input-text)",
+                      backgroundColor: "var(--survey-input-bg)",
+                    }}
                   />
                 </Card>
               </>
@@ -881,9 +1051,15 @@ function EncuestaPageContent() {
                 type="button"
                 onClick={prev}
                 disabled={step === 1 || isSubmitting}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--vandyke)]/20 bg-card px-5 py-3 text-sm font-semibold text-[color:var(--vandyke)] transition hover:border-[color:var(--vandyke)]/40 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                style={{
+                  borderColor: "var(--survey-back-btn-border)",
+                  background: "var(--survey-back-btn-bg)",
+                  color: "var(--survey-back-btn-text)",
+                  boxShadow: "var(--survey-back-btn-shadow)",
+                }}
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-4 w-4" style={{ color: "var(--survey-back-btn-icon)" }} />
                 Volver
               </button>
               {step < 3 ? (

@@ -33,6 +33,21 @@ export interface DietAcceptanceItem {
   count: number;
 }
 
+export interface PriceSummary {
+  responseCount: number;
+  average: number;
+  median: number;
+  min: number;
+  max: number;
+  latestValues: Array<{
+    id: string;
+    amount: number;
+    sex: SurveyResponse["sex"];
+    diet: SurveyResponse["diet"];
+    date: string;
+  }>;
+}
+
 export interface AdminDashboardViewModel {
   total: number;
   completedCount: number;
@@ -46,6 +61,7 @@ export interface AdminDashboardViewModel {
   peakHour: HourlyPoint;
   hasHourly: boolean;
   dietAcceptance: DietAcceptanceItem[];
+  priceSummary?: PriceSummary;
   bestAttr?: AttrSummary;
   worstAttr?: AttrSummary;
   descriptiveCommentsList: SurveyResponse[];

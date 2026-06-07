@@ -1,7 +1,7 @@
-const { AppController } = require("../../dist/src/app.controller.js");
-const { AdminController } = require("../../dist/src/admin/admin.controller.js");
-const { EncuestasController } = require("../../dist/src/encuestas/encuestas.controller.js");
-const { EstadisticasController } = require("../../dist/src/estadisticas/estadisticas.controller.js");
+import { AppController } from "../../src/app.controller";
+import { AdminController } from "../../src/admin/admin.controller";
+import { EncuestasController } from "../../src/encuestas/encuestas.controller";
+import { EstadisticasController } from "../../src/estadisticas/estadisticas.controller";
 
 describe("Controladores HTTP", () => {
   it("debe devolver metadata del servicio desde AppController.getHello", () => {
@@ -120,5 +120,17 @@ describe("Controladores HTTP", () => {
     });
 
     await expect(controller.exportExcel({}, { set() {}, send() {} })).rejects.toThrow(/Excel export failed/);
+  });
+
+  it("debe envolver tambien fallos no tipados del exportador de Excel", async () => {
+    const controller = new EstadisticasController({
+      async getExcelReport() {
+        throw "fallo-desconocido";
+      },
+    });
+
+    await expect(controller.exportExcel({}, { set() {}, send() {} })).rejects.toThrow(
+      /Excel export failed/,
+    );
   });
 });

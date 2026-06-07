@@ -16,6 +16,7 @@ La idea es que en la exposición puedas abrir la IDE, ir al panel correcto y ent
 - `React Testing Library` para componentes React
 - `jsdom` para entorno de navegador simulado en frontend
 - `Playwright` para E2E
+- `Lighthouse CI` para auditorías automáticas de performance y accesibilidad en frontend
 
 No se usa `Python Tests` para este proyecto.
 
@@ -276,11 +277,13 @@ Qué valida:
 - `pnpm test:coverage`
 - `pnpm build`
 - `pnpm test:e2e`
+- `Lighthouse CI` sobre `/`, `/encuesta` y `/administrador`
 
 Además publica artefactos de:
 
 - `frontend/coverage`
 - `frontend/playwright-report`
+- reportes de `Lighthouse CI`
 
 ### Backend
 
@@ -307,3 +310,50 @@ Si aparece, ignorarlo: la configuración válida para este repo es:
 
 - `Vitest` en `Testing`
 - `Playwright` en su apartado propio
+
+## Observabilidad del frontend
+
+### Microsoft Clarity
+
+El frontend quedó preparado para usar `Microsoft Clarity` desde:
+
+- `frontend/src/app/layout.tsx`
+
+Se activa solo si existe:
+
+```bash
+NEXT_PUBLIC_CLARITY_PROJECT_ID=tu_project_id
+```
+
+Archivo de referencia:
+
+- `frontend/.env.example`
+
+Si la variable está vacía:
+
+- no se carga el script
+- no afecta el diseño
+- no afecta Playwright E2E
+
+### Lighthouse CI
+
+La configuración quedó en:
+
+- `frontend/lighthouserc.json`
+
+Qué audita:
+
+- `http://127.0.0.1:3001/`
+- `http://127.0.0.1:3001/encuesta`
+- `http://127.0.0.1:3001/administrador`
+
+Umbrales actuales:
+
+- `performance`: warning si baja de `0.75`
+- `accessibility`: error si baja de `0.90`
+- `best-practices`: warning si baja de `0.85`
+- `seo`: warning si baja de `0.80`
+
+Se ejecuta desde GitHub Actions dentro de:
+
+- `.github/workflows/ci-frontend.yml`

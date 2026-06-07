@@ -1,10 +1,28 @@
-const { EventEmitter } = require("node:events");
-const childProcess = require("node:child_process");
-const fs = require("node:fs");
+import { EventEmitter } from "node:events";
 
-const { EstadisticasService } = require("../../dist/src/estadisticas/estadisticas.service.js");
+const { existsSyncMock, spawnMock } = vi.hoisted(() => ({
+  existsSyncMock: vi.fn(),
+  spawnMock: vi.fn(),
+}));
+
+vi.mock("fs", () => ({
+  existsSync: existsSyncMock,
+}));
+
+vi.mock("child_process", () => ({
+  spawn: spawnMock,
+}));
+
+import { EstadisticasService } from "../../src/estadisticas/estadisticas.service";
 
 describe("EstadisticasService", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    existsSyncMock.mockImplementation((path) =>
+      String(path).includes("generate_excel_report.py"),
+    );
+  });
+
   it("debe delegar la consulta de encuestas al repository", async () => {
     const repository = {
       async findAll(query) {
@@ -33,7 +51,7 @@ describe("EstadisticasService", () => {
     });
   });
 
-  it("debe usar el exportador remoto de Python cuando la URL está disponible", async () => {
+  it("debe usar el exportador remoto de Python cuando la URL estÃ¡ disponible", async () => {
     const service = new EstadisticasService({
       async findAll() {
         return [{ id: "survey-1" }];
@@ -75,7 +93,7 @@ describe("EstadisticasService", () => {
     process.env.PYTHON_EXECUTABLE = originalPythonExecutable;
   });
 
-  it("debe priorizar la URL explícita del exportador y luego usar Vercel como fallback", () => {
+  it("debe priorizar la URL explÃ­cita del exportador y luego usar Vercel como fallback", () => {
     const service = new EstadisticasService({});
     const originalExplicit = process.env.EXCEL_PYTHON_EXPORT_URL;
     const originalVercel = process.env.VERCEL_URL;
@@ -91,7 +109,7 @@ describe("EstadisticasService", () => {
     process.env.VERCEL_URL = originalVercel;
   });
 
-  it("debe devolver null cuando no hay URL explícita ni URL de Vercel", () => {
+  it("debe devolver null cuando no hay URL explÃ­cita ni URL de Vercel", () => {
     const service = new EstadisticasService({});
     const originalExplicit = process.env.EXCEL_PYTHON_EXPORT_URL;
     const originalVercel = process.env.VERCEL_URL;
@@ -112,13 +130,9 @@ describe("EstadisticasService", () => {
 
   it("debe fallar cuando no encuentra el script del exportador de Python", () => {
     const service = new EstadisticasService({});
-    const originalExistsSync = fs.existsSync;
-
-    fs.existsSync = () => false;
+    existsSyncMock.mockReturnValue(false);
 
     expect(() => service.resolvePythonScriptPath()).toThrow(/Python exporter script not found/);
-
-    fs.existsSync = originalExistsSync;
   });
 
   it("debe construir la request al exportador y devolver un buffer", async () => {
@@ -196,7 +210,7 @@ describe("EstadisticasService", () => {
     global.fetch = originalFetch;
   });
 
-  it("debe incluir un cuerpo vacío si la lectura del error HTTP falla", async () => {
+  it("debe incluir un cuerpo vacÃ­o si la lectura del error HTTP falla", async () => {
     const service = new EstadisticasService({});
     const originalFetch = global.fetch;
 
@@ -218,9 +232,7 @@ describe("EstadisticasService", () => {
 
   it("debe resolver el exportador local cuando el proceso hijo finaliza bien", async () => {
     const service = new EstadisticasService({});
-    const originalSpawn = childProcess.spawn;
-
-    childProcess.spawn = () => {
+    spawnMock.mockImplementation(() => {
       const proc = new EventEmitter();
       proc.stdout = new EventEmitter();
       proc.stderr = new EventEmitter();
@@ -232,59 +244,47 @@ describe("EstadisticasService", () => {
         },
       };
       return proc;
-    };
+    });
 
     const buffer = await service.runPythonExporter("python", "script.py", { a: 1 });
     expect(buffer.toString("utf8")).toBe("excel-ok");
-
-    childProcess.spawn = originalSpawn;
   });
 
   it("debe rechazar con un mensaje claro cuando no existe el ejecutable de Python", async () => {
     const service = new EstadisticasService({});
-    const originalSpawn = childProcess.spawn;
-
-    childProcess.spawn = () => {
+    spawnMock.mockImplementation(() => {
       const proc = new EventEmitter();
       proc.stdout = new EventEmitter();
       proc.stderr = new EventEmitter();
       proc.stdin = { write() {}, end() {} };
       process.nextTick(() => proc.emit("error", Object.assign(new Error("missing"), { code: "ENOENT" })));
       return proc;
-    };
+    });
 
     await expect(service.runPythonExporter("python", "script.py", { a: 1 })).rejects.toThrow(
       /Python executable not found/,
     );
-
-    childProcess.spawn = originalSpawn;
   });
 
   it("debe propagar errores inesperados del proceso Python local", async () => {
     const service = new EstadisticasService({});
-    const originalSpawn = childProcess.spawn;
-
-    childProcess.spawn = () => {
+    spawnMock.mockImplementation(() => {
       const proc = new EventEmitter();
       proc.stdout = new EventEmitter();
       proc.stderr = new EventEmitter();
       proc.stdin = { write() {}, end() {} };
       process.nextTick(() => proc.emit("error", new Error("unexpected python error")));
       return proc;
-    };
+    });
 
     await expect(service.runPythonExporter("python", "script.py", { a: 1 })).rejects.toThrow(
       /unexpected python error/,
     );
-
-    childProcess.spawn = originalSpawn;
   });
 
-  it("debe rechazar el exportador local cuando termina con código distinto de cero", async () => {
+  it("debe rechazar el exportador local cuando termina con cÃ³digo distinto de cero", async () => {
     const service = new EstadisticasService({});
-    const originalSpawn = childProcess.spawn;
-
-    childProcess.spawn = () => {
+    spawnMock.mockImplementation(() => {
       const proc = new EventEmitter();
       proc.stdout = new EventEmitter();
       proc.stderr = new EventEmitter();
@@ -296,12 +296,10 @@ describe("EstadisticasService", () => {
         },
       };
       return proc;
-    };
+    });
 
     await expect(service.runPythonExporter("python", "script.py", { a: 1 })).rejects.toThrow(
       /python script crashed/,
     );
-
-    childProcess.spawn = originalSpawn;
   });
 });

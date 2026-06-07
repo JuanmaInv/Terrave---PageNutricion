@@ -1,8 +1,6 @@
-require("reflect-metadata");
-const { plainToInstance } = require("class-transformer");
-const { validateSync } = require("class-validator");
-
-const { GetEstadisticasQueryDto } = require("../../dist/src/estadisticas/dto/get-estadisticas-query.dto.js");
+import { plainToInstance } from "class-transformer";
+import { validateSync } from "class-validator";
+import { GetEstadisticasQueryDto } from "../../src/estadisticas/dto/get-estadisticas-query.dto";
 
 function validate(payload) {
   return validateSync(plainToInstance(GetEstadisticasQueryDto, payload), {
@@ -31,5 +29,16 @@ describe("GetEstadisticasQueryDto", () => {
   it("debe rechazar sexos inválidos", () => {
     const errors = validate({ sex: "x" });
     expect(errors.some((error) => error.property === "sex")).toBe(true);
+  });
+
+  it("debe aceptar filtros vacíos u opcionales omitidos", () => {
+    expect(validate({})).toHaveLength(0);
+    expect(validate({ from: "2026-06-01", to: "2026-06-30" })).toHaveLength(0);
+  });
+
+  it("debe rechazar filtros no string", () => {
+    const errors = validate({ from: 20260601, to: 20260630 });
+    expect(errors.some((error) => error.property === "from")).toBe(true);
+    expect(errors.some((error) => error.property === "to")).toBe(true);
   });
 });

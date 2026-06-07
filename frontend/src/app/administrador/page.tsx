@@ -8,6 +8,7 @@ import { CommentsPanel } from "@/components/admin/CommentsPanel";
 import { DistributionCharts } from "@/components/admin/DistributionCharts";
 import { HourlyChart } from "@/components/admin/HourlyChart";
 import { KpiGrid } from "@/components/admin/KpiGrid";
+import { PriceInsights } from "@/components/admin/PriceInsights";
 import { SensorialSection } from "@/components/admin/SensorialSection";
 import { StatsFilters } from "@/components/admin/StatsFilters";
 import { Footer, Navbar } from "@/components/nutrilen/Navbar";
@@ -17,7 +18,13 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { useSurveyFilters } from "@/hooks/useSurveyFilters";
 import { useSurveyResumen } from "@/hooks/useSurveyResumen";
 import { useSurveyStats } from "@/hooks/useSurveyStats";
-import { descargarBlob, exportarExcel, exportarPDF, validarAdmin } from "@/lib/api";
+import {
+  descargarBlob,
+  exportarExcel,
+  exportarPDF,
+  getUserFacingErrorMessage,
+  validarAdmin,
+} from "@/lib/api";
 
 const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 
@@ -261,6 +268,7 @@ function AdminPageContent({
     peakHour,
     hasHourly,
     dietAcceptance,
+    priceSummary,
     bestAttr,
     worstAttr,
     descriptiveCommentsList,
@@ -301,8 +309,8 @@ function AdminPageContent({
       });
       descargarBlob(blob, `terrave-dashboard-${Date.now()}.pdf`);
       toast.success("PDF descargado");
-    } catch {
-      toast.error("No se pudo exportar el PDF.");
+    } catch (error) {
+      toast.error(getUserFacingErrorMessage(error, "No se pudo exportar el PDF."));
     }
   }
 
@@ -324,9 +332,8 @@ function AdminPageContent({
       descargarBlob(blob, `terrave-encuestas-${Date.now()}.xlsx`);
       toast.success("Excel descargado");
     } catch (error) {
-      const message =
-        error instanceof Error && error.message ? error.message : "No se pudo exportar el archivo.";
-      console.error("Excel export error:", error);
+      const message = getUserFacingErrorMessage(error, "No se pudo exportar el archivo.");
+      console.warn(`Excel export error: ${message}`);
       toast.error(message);
     }
   }
@@ -367,6 +374,7 @@ function AdminPageContent({
         />
         <HourlyChart hourlyDist={hourlyDist} hasHourly={hasHourly} peakHour={peakHour} />
         <SensorialSection sensorial={sensorial} />
+        <PriceInsights priceSummary={priceSummary} />
         <CommentsPanel
           descriptiveCommentsList={descriptiveCommentsList}
           affectiveCommentsList={affectiveCommentsList}

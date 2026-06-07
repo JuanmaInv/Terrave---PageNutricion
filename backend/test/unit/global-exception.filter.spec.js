@@ -1,6 +1,5 @@
-const { BadRequestException } = require("@nestjs/common");
-
-const { GlobalExceptionFilter } = require("../../dist/src/common/filters/global-exception.filter.js");
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { GlobalExceptionFilter } from "../../src/common/filters/global-exception.filter";
 
 function buildResponseRecorder() {
   return {
@@ -64,7 +63,6 @@ describe("GlobalExceptionFilter", () => {
   });
 
   it("debe mapear HttpException con payload string", () => {
-    const { UnauthorizedException } = require("@nestjs/common");
     const filter = new GlobalExceptionFilter();
     const response = buildResponseRecorder();
 

@@ -1,7 +1,7 @@
-const { ServiceUnavailableException } = require("@nestjs/common");
-const { HealthController } = require("../../dist/src/health/health.controller.js");
+import { ServiceUnavailableException } from "@nestjs/common";
+import { HealthController } from "../../src/health/health.controller";
 
-describe("HealthController", () => {
+describe("Controlador de salud", () => {
   it("debe devolver readiness ok cuando la base y los secretos están configurados", async () => {
     const db = { async query() {} };
     const controller = new HealthController(db);
@@ -47,6 +47,21 @@ describe("HealthController", () => {
     const originalClerkSecret = process.env.CLERK_SECRET_KEY;
 
     process.env.DATABASE_URL = "";
+    process.env.CLERK_SECRET_KEY = "";
+
+    await expect(controller.getReadiness()).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    process.env.DATABASE_URL = originalDatabaseUrl;
+    process.env.CLERK_SECRET_KEY = originalClerkSecret;
+  });
+
+  it("debe devolver readiness degradado cuando falta solo Clerk aunque la base responda", async () => {
+    const db = { async query() {} };
+    const controller = new HealthController(db);
+    const originalDatabaseUrl = process.env.DATABASE_URL;
+    const originalClerkSecret = process.env.CLERK_SECRET_KEY;
+
+    process.env.DATABASE_URL = "postgres://example";
     process.env.CLERK_SECRET_KEY = "";
 
     await expect(controller.getReadiness()).rejects.toBeInstanceOf(ServiceUnavailableException);

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { obtenerEstadisticas } from "@/lib/api";
+import { getUserFacingErrorMessage, obtenerEstadisticas } from "@/lib/api";
 import { type SurveyResponse } from "@/lib/nutrilen";
 import { type SurveyFilters } from "./useSurveyFilters";
 
@@ -42,11 +42,7 @@ export function useSurveyStats(
 
       setData(rows);
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "No se pudieron cargar estadisticas del backend.",
-      );
+      toast.error(getUserFacingErrorMessage(error, "No se pudieron cargar estadisticas del backend."));
     } finally {
       setIsLoading(false);
     }

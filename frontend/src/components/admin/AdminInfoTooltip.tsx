@@ -1,7 +1,7 @@
 "use client";
 
 import { Info } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 interface AdminInfoTooltipProps {
   content: string;
@@ -11,6 +11,7 @@ interface AdminInfoTooltipProps {
 export function AdminInfoTooltip({ content, label }: AdminInfoTooltipProps) {
   const rootRef = useRef<HTMLSpanElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const tooltipId = useId();
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [placement, setPlacement] = useState({
@@ -122,6 +123,8 @@ export function AdminInfoTooltip({ content, label }: AdminInfoTooltipProps) {
         ref={buttonRef}
         type="button"
         aria-label={label}
+        aria-expanded={open}
+        aria-describedby={tooltipId}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         onClick={() => setOpen((current) => !current)}
@@ -132,7 +135,9 @@ export function AdminInfoTooltip({ content, label }: AdminInfoTooltipProps) {
         <Info className="h-3.5 w-3.5" />
       </button>
       <span
+        id={tooltipId}
         role="tooltip"
+        aria-hidden={!open}
         className={`${baseTooltipClasses} ${
           isMobile ? mobileTooltipClasses : desktopTooltipClasses
         }`}

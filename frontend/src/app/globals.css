@@ -115,6 +115,33 @@
   --brand-shell-end: oklch(0.27 0.03 37);
   --brand-glow-a: oklch(0.79 0.14 80 / 0.12);
   --brand-glow-b: oklch(0.67 0.09 110 / 0.16);
+  --survey-step-inactive-border: color-mix(in oklab, var(--vandyke) 42%, transparent);
+  --survey-step-inactive-bg: #fffaf1;
+  --survey-step-inactive-text: var(--vandyke);
+  --survey-step-inactive-label: var(--vandyke);
+  --survey-step-line: color-mix(in oklab, var(--vandyke) 26%, transparent);
+  --survey-step-shell-bg: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--cream-deep) 92%, white) 0%,
+    color-mix(in oklab, var(--cream) 96%, white) 100%
+  );
+  --survey-step-shell-border: color-mix(in oklab, var(--vandyke) 14%, transparent);
+  --survey-step-shell-shadow: 0 12px 30px -24px color-mix(in oklab, var(--vandyke) 32%, transparent);
+  --survey-step-track: color-mix(in oklab, var(--vandyke) 18%, var(--cream) 82%);
+  --survey-page-title: var(--vandyke);
+  --survey-back-btn-border: color-mix(in oklab, var(--pumpkin) 18%, var(--vandyke) 20%);
+  --survey-back-btn-bg: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--cream) 86%, white 14%) 0%,
+    color-mix(in oklab, var(--card) 92%, var(--cream) 8%) 100%
+  );
+  --survey-back-btn-text: var(--vandyke);
+  --survey-back-btn-icon: var(--pumpkin);
+  --survey-back-btn-shadow:
+    0 14px 28px -22px color-mix(in oklab, var(--vandyke) 28%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--cream) 60%, transparent) inset;
+  --survey-input-bg: color-mix(in oklab, var(--background) 84%, white 16%);
+  --survey-input-text: var(--vandyke);
 }
 
 @theme inline {
@@ -180,10 +207,55 @@
   --chart-grid: oklch(0.9 0.015 80 / 0.12);
   --feature-card-solid: oklch(0.38 0.036 36);
   --brand-shell-start: oklch(0.22 0.024 36);
-  --brand-shell-mid: oklch(0.27 0.03 39);
+  --brand-shell-mid: oklch(0.255 0.029 39);
   --brand-shell-end: oklch(0.21 0.022 35);
-  --brand-glow-a: oklch(0.74 0.08 78 / 0.08);
-  --brand-glow-b: oklch(0.67 0.08 110 / 0.1);
+  --brand-glow-a: oklch(0.78 0.14 82 / 0.05);
+  --brand-glow-b: oklch(0.73 0.13 112 / 0.08);
+  --survey-step-inactive-border: oklch(0.95 0.01 80 / 0.22);
+  --survey-step-inactive-bg: oklch(0.33 0.024 41);
+  --survey-step-inactive-text: var(--cream);
+  --survey-step-inactive-label: oklch(0.9 0.015 80 / 0.84);
+  --survey-step-line: oklch(0.95 0.01 80 / 0.14);
+  --survey-step-shell-bg: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--card) 88%, black 12%) 0%,
+    color-mix(in oklab, var(--background) 82%, var(--card) 18%) 100%
+  );
+  --survey-step-shell-border: oklch(0.95 0.012 82 / 0.16);
+  --survey-step-shell-shadow:
+    0 18px 36px -24px oklch(0.06 0.012 36 / 0.82),
+    0 0 0 1px oklch(0.95 0.012 82 / 0.06);
+  --survey-step-track: oklch(0.95 0.012 82 / 0.22);
+  --survey-page-title: oklch(0.97 0.015 84);
+  --survey-back-btn-border: color-mix(in oklab, var(--orange-yellow) 22%, white 12%);
+  --survey-back-btn-bg: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--card) 92%, white 8%) 0%,
+    color-mix(in oklab, var(--background) 86%, var(--card) 14%) 100%
+  );
+  --survey-back-btn-text: oklch(0.96 0.015 84);
+  --survey-back-btn-icon: var(--orange-yellow);
+  --survey-back-btn-shadow:
+    0 16px 30px -22px oklch(0.05 0.012 36 / 0.82),
+    0 0 0 1px oklch(0.98 0.012 84 / 0.08) inset;
+  --survey-input-bg: color-mix(in oklab, var(--card) 88%, white 12%);
+  --survey-input-text: var(--cream);
+}
+
+.survey-step-badge {
+  background: color-mix(in oklab, var(--orange-yellow) 56%, white 10%);
+  color: color-mix(in oklab, var(--vandyke) 96%, black 4%);
+  box-shadow:
+    0 10px 22px -18px color-mix(in oklab, var(--orange-yellow) 62%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--orange-yellow) 36%, transparent);
+}
+
+.dark .survey-step-badge {
+  background: color-mix(in oklab, var(--moss) 72%, var(--brand-shell-mid) 28%);
+  color: oklch(0.98 0.014 86);
+  box-shadow:
+    0 10px 24px -16px color-mix(in oklab, var(--pumpkin) 72%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--moss) 58%, transparent);
 }
 
 @layer base {

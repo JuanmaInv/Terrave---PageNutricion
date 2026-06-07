@@ -1,8 +1,6 @@
-require("reflect-metadata");
-const { plainToInstance } = require("class-transformer");
-const { validateSync } = require("class-validator");
-
-const { UpsertEncuestaSessionDto } = require("../../dist/src/encuestas/dto/upsert-encuesta-session.dto.js");
+import { plainToInstance } from "class-transformer";
+import { validateSync } from "class-validator";
+import { UpsertEncuestaSessionDto } from "../../src/encuestas/dto/upsert-encuesta-session.dto";
 
 function buildValidPayload() {
   return {
@@ -53,5 +51,26 @@ describe("UpsertEncuestaSessionDto", () => {
   it("debe rechazar un monto estimado con caracteres no numéricos", () => {
     const errors = validate({ ...buildValidPayload(), willingnessToPay: "5000 pesos" });
     expect(errors.some((error) => error.property === "willingnessToPay")).toBe(true);
+  });
+
+  it("debe rechazar enums y atributos parciales inválidos", () => {
+    const errors = validate({
+      ...buildValidPayload(),
+      sex: "x",
+      diet: "carnivoro",
+      liked: "quizas",
+      consumeAgain: "siempre",
+      recommend: 6,
+      attrs: {
+        color: 0,
+      },
+    });
+
+    expect(errors.some((error) => error.property === "sex")).toBe(true);
+    expect(errors.some((error) => error.property === "diet")).toBe(true);
+    expect(errors.some((error) => error.property === "liked")).toBe(true);
+    expect(errors.some((error) => error.property === "consumeAgain")).toBe(true);
+    expect(errors.some((error) => error.property === "recommend")).toBe(true);
+    expect(errors.some((error) => error.property === "attrs")).toBe(true);
   });
 });

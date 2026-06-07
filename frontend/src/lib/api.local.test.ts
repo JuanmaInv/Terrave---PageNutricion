@@ -43,4 +43,15 @@ describe("Fallback local de la API", () => {
       inProgressCount: 0,
     });
   });
+
+  it("debe normalizar errores de conexion para mostrarlos de forma clara", async () => {
+    const api = await import("./api");
+
+    expect(api.normalizeClientError(new Error("Failed to fetch"), "fallback").message).toBe(
+      "Se perdio la conexion con el servidor. Verifica tu internet e intenta nuevamente.",
+    );
+    expect(api.normalizeClientError("NetworkError", "fallback").message).toBe(
+      "Se perdio la conexion con el servidor. Verifica tu internet e intenta nuevamente.",
+    );
+  });
 });

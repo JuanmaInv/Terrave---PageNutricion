@@ -83,6 +83,24 @@ export class PdfReportExporter implements ReportExporter {
     const pricing = surveys
       .map((s, i) => ({ idx: i + 1, text: s.willingnessToPay?.trim() ?? "" }))
       .filter((x) => x.text.length > 0);
+    const pricingValues = pricing
+      .map((item) => Number(item.text))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .sort((a, b) => a - b);
+    const averagePrice = pricingValues.length
+      ? Number((pricingValues.reduce((sum, value) => sum + value, 0) / pricingValues.length).toFixed(2))
+      : 0;
+    const medianPrice = !pricingValues.length
+      ? 0
+      : pricingValues.length % 2 === 1
+        ? pricingValues[(pricingValues.length - 1) / 2]
+        : Number(
+            (
+              (pricingValues[pricingValues.length / 2 - 1] +
+                pricingValues[pricingValues.length / 2]) /
+              2
+            ).toFixed(2),
+          );
 
     const addSectionTitle = (text: string, y: number) => {
       doc.setFillColor(...SURFACE);
@@ -267,6 +285,18 @@ export class PdfReportExporter implements ReportExporter {
       body: affective.length
         ? affective.map((d) => [`Participante ${d.idx}: ${d.text}`])
         : [["Sin observaciones afectivas para el filtro aplicado."]],
+      headStyles: { fillColor: HEAD_SECONDARY, textColor: [255, 255, 255] },
+      margin: { left: MARGIN, right: MARGIN },
+    });
+
+    renderTable({
+      startY: (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14,
+      head: [["Resumen de disposición a pagar"]],
+      body: pricingValues.length
+        ? [[
+            `Respuestas: ${pricingValues.length} | Promedio: ARS ${averagePrice.toFixed(0)} | Mediana: ARS ${medianPrice.toFixed(0)} | Rango: ARS ${(pricingValues[0] ?? 0).toFixed(0)} - ARS ${(pricingValues[pricingValues.length - 1] ?? 0).toFixed(0)}`,
+          ]]
+        : [["Sin respuestas de precio para el filtro aplicado."]],
       headStyles: { fillColor: HEAD_SECONDARY, textColor: [255, 255, 255] },
       margin: { left: MARGIN, right: MARGIN },
     });

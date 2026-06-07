@@ -115,6 +115,24 @@ export class ExcelReportExporter implements ReportExporter {
       };
     }).filter((x) => x.participantes > 0);
 
+    const priceValues = surveys
+      .map((survey) => Number(survey.willingnessToPay?.trim() ?? ""))
+      .filter((amount) => Number.isFinite(amount) && amount > 0)
+      .sort((a, b) => a - b);
+    const averagePrice = priceValues.length
+      ? Number((priceValues.reduce((sum, amount) => sum + amount, 0) / priceValues.length).toFixed(2))
+      : 0;
+    const medianPrice = !priceValues.length
+      ? 0
+      : priceValues.length % 2 === 1
+        ? priceValues[(priceValues.length - 1) / 2]
+        : Number(
+            (
+              (priceValues[priceValues.length / 2 - 1] + priceValues[priceValues.length / 2]) /
+              2
+            ).toFixed(2),
+          );
+
     const resumen = [
       { metrica: "Participantes", valor: total },
       { metrica: "Encuestas completas", valor: total },
@@ -126,6 +144,11 @@ export class ExcelReportExporter implements ReportExporter {
       { metrica: "Menor valoracion (puntaje)", valor: worstAttr?.promedio ?? 0 },
       { metrica: "Hora pico", valor: peakHour?.hora ?? "-" },
       { metrica: "Cantidad en hora pico", valor: peakHour?.cantidad ?? 0 },
+      { metrica: "Respuestas de precio", valor: priceValues.length },
+      { metrica: "Precio promedio (ARS)", valor: averagePrice },
+      { metrica: "Precio mediano (ARS)", valor: medianPrice },
+      { metrica: "Precio minimo (ARS)", valor: priceValues[0] ?? 0 },
+      { metrica: "Precio maximo (ARS)", valor: priceValues[priceValues.length - 1] ?? 0 },
     ];
     const resumenSheet = XLSX.utils.json_to_sheet(resumen);
     resumenSheet["!cols"] = [{ wch: 42 }, { wch: 24 }];
@@ -151,6 +174,12 @@ export class ExcelReportExporter implements ReportExporter {
       {
         seccion: "Hora pico",
         detalle: `${peakHour?.hora ?? "-"} con ${peakHour?.cantidad ?? 0} respuesta(s).`,
+      },
+      {
+        seccion: "Disposicion a pagar",
+        detalle: priceValues.length
+          ? `Se registraron ${priceValues.length} respuesta(s) de precio. Promedio: ARS ${averagePrice.toFixed(0)} | Mediana: ARS ${medianPrice.toFixed(0)} | Rango: ARS ${(priceValues[0] ?? 0).toFixed(0)}-${(priceValues[priceValues.length - 1] ?? 0).toFixed(0)}.`
+          : "No se registraron respuestas de precio para el filtro aplicado.",
       },
       {
         seccion: "Recomendacion 1",
@@ -188,6 +217,26 @@ export class ExcelReportExporter implements ReportExporter {
     const aceptSheet = XLSX.utils.json_to_sheet(dietAcceptanceRows);
     aceptSheet["!cols"] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(workbook, aceptSheet, "Aceptacion_por_Dieta");
+
+    const priceSheet = XLSX.utils.json_to_sheet(
+      priceValues.length
+        ? [
+            { metrica: "Cantidad de respuestas", valor: priceValues.length },
+            { metrica: "Precio promedio (ARS)", valor: averagePrice },
+            { metrica: "Precio mediano (ARS)", valor: medianPrice },
+            { metrica: "Precio minimo (ARS)", valor: priceValues[0] ?? 0 },
+            { metrica: "Precio maximo (ARS)", valor: priceValues[priceValues.length - 1] ?? 0 },
+            ...surveys
+              .filter((survey) => (survey.willingnessToPay?.trim() ?? "").length > 0)
+              .map((survey) => ({
+                metrica: `Respuesta ${survey.id}`,
+                valor: survey.willingnessToPay ?? "",
+              })),
+          ]
+        : [{ metrica: "Precio", valor: "Sin respuestas de precio para el filtro aplicado." }],
+    );
+    priceSheet["!cols"] = [{ wch: 34 }, { wch: 22 }];
+    XLSX.utils.book_append_sheet(workbook, priceSheet, "Disposicion_Precio");
 
     const descriptiveRows = surveys
       .filter((s) => (s.descriptiveComments ?? "").trim().length > 0)

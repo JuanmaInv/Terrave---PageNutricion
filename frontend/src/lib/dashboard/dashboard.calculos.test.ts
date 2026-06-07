@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sampleSurveys } from "@/test/fixtures/surveys";
 import { buildAdminDashboardViewModel } from "./build-admin-dashboard-view-model";
 
-describe("Cálculos del dashboard", () => {
+describe("Calculos del dashboard", () => {
   it("debe calcular totales, promedios y porcentajes correctamente", () => {
     const viewModel = buildAdminDashboardViewModel(sampleSurveys, 2);
 
@@ -13,7 +13,23 @@ describe("Cálculos del dashboard", () => {
     expect(viewModel.globalScore).toBeGreaterThan(0);
   });
 
-  it("debe agrupar respuestas por opción con labels compatibles para gráficos", () => {
+  it("debe resumir correctamente la disposicion a pagar", () => {
+    const viewModel = buildAdminDashboardViewModel(sampleSurveys);
+
+    expect(viewModel.priceSummary).toMatchObject({
+      responseCount: 3,
+      average: 4233.33,
+      median: 4500,
+      min: 3000,
+      max: 5200,
+    });
+    expect(viewModel.priceSummary?.latestValues[0]).toMatchObject({
+      id: "survey-3",
+      amount: 5200,
+    });
+  });
+
+  it("debe agrupar respuestas por opcion con labels compatibles para graficos", () => {
     const viewModel = buildAdminDashboardViewModel(sampleSurveys);
 
     expect(viewModel.dietDist.find((item) => item.id === "vegano")).toMatchObject({
@@ -23,10 +39,12 @@ describe("Cálculos del dashboard", () => {
     expect(viewModel.sexDist.map((item) => item.name)).toContain("Femenino");
     expect(viewModel.hourlyDist).toHaveLength(24);
     expect(viewModel.hourlyDist.reduce((sum, item) => sum + item.count, 0)).toBe(3);
-    expect(viewModel.hourlyDist.some((item) => item.label.endsWith("h") && item.count > 0)).toBe(true);
+    expect(viewModel.hourlyDist.some((item) => item.label.endsWith("h") && item.count > 0)).toBe(
+      true,
+    );
   });
 
-  it("debe devolver un dashboard válido cuando no hay respuestas", () => {
+  it("debe devolver un dashboard valido cuando no hay respuestas", () => {
     const viewModel = buildAdminDashboardViewModel([]);
 
     expect(viewModel.total).toBe(0);
@@ -34,5 +52,6 @@ describe("Cálculos del dashboard", () => {
     expect(viewModel.globalScore).toBe(0);
     expect(viewModel.dietAcceptance).toEqual([]);
     expect(viewModel.hourlyDist).toHaveLength(24);
+    expect(viewModel.priceSummary).toBeUndefined();
   });
 });

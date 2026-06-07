@@ -3,12 +3,12 @@ name: CI Backend
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "beta"]
+    branches: ["main", "beta", "qa"]
     paths:
       - "backend/**"
       - ".github/workflows/ci-backend.yml"
   pull_request:
-    branches: ["main", "beta"]
+    branches: ["main", "beta", "qa"]
     paths:
       - "backend/**"
       - ".github/workflows/ci-backend.yml"
@@ -65,4 +65,12 @@ jobs:
         with:
           name: backend-coverage
           path: backend/coverage
+          if-no-files-found: ignore
+
+      - name: Upload backend build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist
+          path: backend/dist
           if-no-files-found: ignore

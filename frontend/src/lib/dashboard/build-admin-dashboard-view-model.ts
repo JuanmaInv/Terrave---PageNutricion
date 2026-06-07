@@ -21,6 +21,21 @@ export function buildAdminDashboardViewModel(
   inProgressCount = 0,
 ): AdminDashboardViewModel {
   const total = data.length;
+  const priceResponses = data
+    .map((survey) => {
+      const raw = survey.willingnessToPay?.trim() ?? "";
+      if (!raw) return null;
+      const amount = Number(raw);
+      if (!Number.isFinite(amount) || amount <= 0) return null;
+      return {
+        id: survey.id,
+        amount,
+        sex: survey.sex,
+        diet: survey.diet,
+        date: survey.date,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const avg = (attr: AttrKey) => {
     if (!data.length) return 0;
@@ -109,6 +124,36 @@ export function buildAdminDashboardViewModel(
     .slice(-12)
     .reverse() as SurveyResponse[];
 
+  const sortedPriceAmounts = [...priceResponses]
+    .map((item) => item.amount)
+    .sort((a, b) => a - b);
+  const priceSummary =
+    sortedPriceAmounts.length === 0
+      ? undefined
+      : {
+          responseCount: sortedPriceAmounts.length,
+          average:
+            Math.round(
+              (sortedPriceAmounts.reduce((sum, amount) => sum + amount, 0) /
+                sortedPriceAmounts.length) *
+                100,
+            ) / 100,
+          median:
+            sortedPriceAmounts.length % 2 === 1
+              ? sortedPriceAmounts[(sortedPriceAmounts.length - 1) / 2]
+              : Math.round(
+                  ((sortedPriceAmounts[sortedPriceAmounts.length / 2 - 1] +
+                    sortedPriceAmounts[sortedPriceAmounts.length / 2]) /
+                    2) *
+                    100,
+                ) / 100,
+          min: sortedPriceAmounts[0],
+          max: sortedPriceAmounts[sortedPriceAmounts.length - 1],
+          latestValues: [...priceResponses]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 6),
+        };
+
   return {
     total,
     completedCount: total,
@@ -122,6 +167,7 @@ export function buildAdminDashboardViewModel(
     peakHour,
     hasHourly,
     dietAcceptance,
+    priceSummary,
     bestAttr,
     worstAttr,
     descriptiveCommentsList,

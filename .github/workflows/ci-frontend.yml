@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
       CLERK_SECRET_KEY: sk_test_ci_placeholder
       NEXT_PUBLIC_API_URL: http://127.0.0.1:3000/api/v1
     defaults:
@@ -77,7 +77,7 @@ jobs:
     timeout-minutes: 30
     needs: frontend-quality
     env:
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
       CLERK_SECRET_KEY: sk_test_ci_placeholder
       NEXT_PUBLIC_API_URL: http://127.0.0.1:3000/api/v1
     defaults:
@@ -122,7 +122,7 @@ jobs:
     timeout-minutes: 25
     needs: frontend-quality
     env:
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
       CLERK_SECRET_KEY: sk_test_ci_placeholder
       NEXT_PUBLIC_API_URL: http://127.0.0.1:3000/api/v1
     steps:

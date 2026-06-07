@@ -1,0 +1,46 @@
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 2,
+      "startServerCommand": "pnpm --dir frontend start",
+      "startServerReadyPattern": "Local:",
+      "startServerReadyTimeout": 120000,
+      "url": [
+        "http://127.0.0.1:3001/",
+        "http://127.0.0.1:3001/encuesta",
+        "http://127.0.0.1:3001/administrador"
+      ]
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": [
+          "warn",
+          {
+            "minScore": 0.75
+          }
+        ],
+        "categories:accessibility": [
+          "error",
+          {
+            "minScore": 0.9
+          }
+        ],
+        "categories:best-practices": [
+          "warn",
+          {
+            "minScore": 0.85
+          }
+        ],
+        "categories:seo": [
+          "warn",
+          {
+            "minScore": 0.8
+          }
+        ]
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

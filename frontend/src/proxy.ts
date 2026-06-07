@@ -1,6 +1,13 @@
+import { NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
-export default clerkMiddleware();
+const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
+
+const proxy = TEST_AUTH_MODE
+  ? () => NextResponse.next()
+  : clerkMiddleware();
+
+export default proxy;
 
 export const config = {
   matcher: [

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { createClerkClient, verifyToken } from "@clerk/backend";
 import { DatabaseService } from "../database/database.service";
 
@@ -6,8 +6,26 @@ type UsuarioAdminRow = {
   id: string;
 };
 
+type ClerkTokenPayload = {
+  sub?: string | null;
+};
+
+type ClerkUserLike = {
+  primaryEmailAddress?: {
+    emailAddress?: string | null;
+  } | null;
+};
+
+type ClerkClientLike = {
+  users: {
+    getUser: (userId: string) => Promise<ClerkUserLike>;
+  };
+};
+
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(private readonly db: DatabaseService) {}
 
   getTokenFromAuthorization(authorization?: string): string {
@@ -23,13 +41,13 @@ export class AdminService {
       throw new UnauthorizedException("Missing Clerk backend configuration");
     }
 
-    const payload = await verifyToken(token, { secretKey });
+    const payload = await this.verifyClerkJwt(token, secretKey);
     const userId = String(payload.sub ?? "");
     if (!userId) {
       throw new UnauthorizedException("Invalid Clerk token");
     }
 
-    const clerk = createClerkClient({ secretKey });
+    const clerk = this.buildClerkClient(secretKey);
     const user = await clerk.users.getUser(userId);
     const email = user.primaryEmailAddress?.emailAddress?.toLowerCase();
     if (!email) {
@@ -38,10 +56,36 @@ export class AdminService {
 
     const isAdmin = await this.isAdminInDatabase(email);
     if (!isAdmin) {
+      this.logger.warn(
+        JSON.stringify({
+          event: "admin_access_denied",
+          userId,
+          email: this.maskEmail(email),
+        })
+      );
       throw new UnauthorizedException("Admin access required");
     }
 
+    this.logger.log(
+      JSON.stringify({
+        event: "admin_access_granted",
+        userId,
+        email: this.maskEmail(email),
+      })
+    );
+
     return { isAdmin: true, email };
+  }
+
+  protected async verifyClerkJwt(
+    token: string,
+    secretKey: string
+  ): Promise<ClerkTokenPayload> {
+    return await verifyToken(token, { secretKey });
+  }
+
+  protected buildClerkClient(secretKey: string): ClerkClientLike {
+    return createClerkClient({ secretKey });
   }
 
   private async isAdminInDatabase(email: string): Promise<boolean> {
@@ -58,5 +102,11 @@ export class AdminService {
     );
 
     return (result.rowCount ?? 0) > 0;
+  }
+
+  private maskEmail(email: string): string {
+    const [name, domain] = email.split("@");
+    if (!name || !domain) return "redacted";
+    return `${name.slice(0, 2)}***@${domain}`;
   }
 }

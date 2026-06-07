@@ -6,6 +6,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   ValidateNested
@@ -56,6 +57,16 @@ export class CreateEncuestaDto {
   id?: string;
 
   @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  sessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  clientSessionKey?: string;
+
+  @IsOptional()
   @IsISO8601()
   date?: string;
 
@@ -96,6 +107,7 @@ export class CreateEncuestaDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^\d+$/, { message: "willingnessToPay must contain only digits" })
   willingnessToPay?: string;
 
   @IsOptional()

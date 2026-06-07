@@ -6,8 +6,17 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint",
-    "ci:check": "pnpm lint && pnpm build"
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\" playwright.config.ts vitest.config.ts setupTests.ts next.config.ts",
+    "test": "pnpm test:unit",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "test:coverage": "vitest run --config vitest.config.ts --coverage",
+    "test:e2e": "playwright test --config playwright.config.ts",
+    "test:e2e:ui": "playwright test --config playwright.config.ts --ui",
+    "test:e2e:headed": "playwright test --config playwright.config.ts --headed",
+    "test:e2e:report": "playwright show-report",
+    "ci:check": "pnpm lint && pnpm build",
+    "perf:load": "node scripts/measure-load.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.24.0",
@@ -23,14 +32,23 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.2",
+    "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.8"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

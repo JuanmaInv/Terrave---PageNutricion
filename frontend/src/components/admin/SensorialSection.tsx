@@ -12,8 +12,10 @@ import {
 } from "recharts";
 import { ATTRIBUTES, type AttrKey } from "@/lib/nutrilen";
 import type { SensorialItem } from "./admin-dashboard.types";
+import { AdminChartTooltip } from "./AdminChartTooltip";
+import { AdminInfoTooltip } from "./AdminInfoTooltip";
+import { useAdminChartPalette } from "./useAdminChartPalette";
 
-const VANDYKE = "#65382B";
 const MOSS = "#898C32";
 const ORANGE = "#F4B223";
 
@@ -23,6 +25,7 @@ interface SensorialSectionProps {
 
 export function SensorialSection({ sensorial }: SensorialSectionProps) {
   const [activeAttrs, setActiveAttrs] = useState<AttrKey[]>(ATTRIBUTES.map((a) => a.key));
+  const palette = useAdminChartPalette();
   const radarData = sensorial.filter((d) => activeAttrs.includes(d.key));
 
   return (
@@ -30,9 +33,15 @@ export function SensorialSection({ sensorial }: SensorialSectionProps) {
       <section className="mt-8 grid min-w-0 gap-6 xl:grid-cols-2">
         <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
           <div>
-            <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-              Perfil sensorial
-            </h2>
+            <div className="flex items-start gap-3">
+              <h2 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">
+                Perfil sensorial
+              </h2>
+              <AdminInfoTooltip
+                label="Mas informacion sobre perfil sensorial"
+                content="Resume los promedios de color, aroma, textura y sabor. Los chips permiten focalizar el radar en atributos puntuales."
+              />
+            </div>
             <p className="mt-1 text-sm text-muted-foreground">
               Evaluación promedio por atributo (escala 1-5). Tocá los chips para activar o desactivar atributos.
             </p>
@@ -45,7 +54,7 @@ export function SensorialSection({ sensorial }: SensorialSectionProps) {
                   key={a.key}
                   onClick={() =>
                     setActiveAttrs((s) =>
-                      s.includes(a.key) ? s.filter((x) => x !== a.key) : [...s, a.key],
+                        s.includes(a.key) ? s.filter((x) => x !== a.key) : [...s, a.key],
                     )
                   }
                   className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition sm:px-3 sm:text-xs ${
@@ -63,13 +72,13 @@ export function SensorialSection({ sensorial }: SensorialSectionProps) {
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart
                 data={radarData}
-                outerRadius="62%"
-                margin={{ top: 24, right: 38, bottom: 24, left: 38 }}
+                outerRadius="60%"
+                margin={{ top: 16, right: 18, bottom: 16, left: 18 }}
               >
-                <PolarGrid stroke="#65382B22" />
+                <PolarGrid stroke={palette.chartGrid} />
                 <PolarAngleAxis
                   dataKey="metricShort"
-                  tick={{ fill: VANDYKE, fontSize: 11, fontWeight: 700 }}
+                  tick={{ fill: palette.chartText, fontSize: 12, fontWeight: 700 }}
                 />
                 <PolarRadiusAxis
                   angle={90}
@@ -83,32 +92,30 @@ export function SensorialSection({ sensorial }: SensorialSectionProps) {
                   fill={MOSS}
                   fillOpacity={0.35}
                   strokeWidth={2}
-                  isAnimationActive
+                  isAnimationActive={false}
                 />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 12,
-                    border: "1px solid #65382B22",
-                    background: "var(--card)",
-                    color: "var(--vandyke)",
-                  }}
-                  formatter={(v: number) => [`${v.toFixed(1)} / 5`, "Promedio"]}
-                />
+                <Tooltip content={<AdminChartTooltip valueSuffix=" / 5" />} formatter={(v: number) => [v.toFixed(1), "Promedio"]} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] sm:rounded-3xl sm:p-6">
-          <h2 className="font-serif text-xl font-semibold text-[color:var(--vandyke)]">
-            Promedios por atributo
-          </h2>
+          <div className="flex items-start gap-3">
+            <h2 className="font-serif text-xl font-semibold text-[color:var(--surface-title)]">
+              Promedios por atributo
+            </h2>
+            <AdminInfoTooltip
+              label="Mas informacion sobre promedios por atributo"
+              content="Lista lineal de los puntajes descriptivos sobre 5 para facilitar comparacion rapida entre atributos."
+            />
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">Puntaje sobre 5 por atributo descriptivo.</p>
           <ul className="mt-6 space-y-4">
             {sensorial.map((d) => (
               <li key={d.metric}>
                 <div className="flex items-baseline justify-between text-sm">
-                  <span className="font-medium text-[color:var(--vandyke)]">{d.metric}</span>
+                  <span className="font-medium text-[color:var(--surface-title)]">{d.metric}</span>
                   <span className="font-serif text-lg font-semibold text-[color:var(--moss)]">
                     {d.value.toFixed(1)}
                   </span>

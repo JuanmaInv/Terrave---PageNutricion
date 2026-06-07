@@ -1,0 +1,44 @@
+import { plainToInstance } from "class-transformer";
+import { validateSync } from "class-validator";
+import { GetEstadisticasQueryDto } from "../../src/estadisticas/dto/get-estadisticas-query.dto";
+
+function validate(payload) {
+  return validateSync(plainToInstance(GetEstadisticasQueryDto, payload), {
+    whitelist: true,
+    forbidNonWhitelisted: false,
+  });
+}
+
+describe("GetEstadisticasQueryDto", () => {
+  it("debe aceptar filtros válidos de estadísticas", () => {
+    expect(
+      validate({
+        diet: "vegano",
+        sex: "femenino",
+        from: "2026-06-01",
+        to: "2026-06-30",
+      }),
+    ).toHaveLength(0);
+  });
+
+  it("debe rechazar dietas inválidas", () => {
+    const errors = validate({ diet: "carnivoro" });
+    expect(errors.some((error) => error.property === "diet")).toBe(true);
+  });
+
+  it("debe rechazar sexos inválidos", () => {
+    const errors = validate({ sex: "x" });
+    expect(errors.some((error) => error.property === "sex")).toBe(true);
+  });
+
+  it("debe aceptar filtros vacíos u opcionales omitidos", () => {
+    expect(validate({})).toHaveLength(0);
+    expect(validate({ from: "2026-06-01", to: "2026-06-30" })).toHaveLength(0);
+  });
+
+  it("debe rechazar filtros no string", () => {
+    const errors = validate({ from: 20260601, to: 20260630 });
+    expect(errors.some((error) => error.property === "from")).toBe(true);
+    expect(errors.some((error) => error.property === "to")).toBe(true);
+  });
+});

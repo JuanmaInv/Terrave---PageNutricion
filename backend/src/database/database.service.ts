@@ -10,6 +10,10 @@ export class DatabaseService implements OnModuleDestroy {
     if (!rawConnectionString) {
       throw new Error("DATABASE_URL is required");
     }
+    const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED === "true";
+    const max = Number(process.env.DB_POOL_MAX ?? "10");
+    const idleTimeoutMillis = Number(process.env.DB_IDLE_TIMEOUT_MS ?? "10000");
+    const connectionTimeoutMillis = Number(process.env.DB_CONNECTION_TIMEOUT_MS ?? "5000");
 
     const connectionUrl = new URL(rawConnectionString);
     // Avoid pg/pg-connection-string sslmode side-effects from URL params.
@@ -22,8 +26,11 @@ export class DatabaseService implements OnModuleDestroy {
 
     this.pool = new Pool({
       connectionString,
+      max,
+      idleTimeoutMillis,
+      connectionTimeoutMillis,
       ssl: {
-        rejectUnauthorized: false
+        rejectUnauthorized
       }
     });
   }

@@ -1,22 +1,32 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useState } from "react";
-import { Navbar, Footer } from "@/components/nutrilen/Navbar";
-import { PageLoader, useNavLoader } from "@/components/nutrilen/PageLoader";
-import { toast } from "sonner";
 import { SignedIn, SignedOut, SignIn, useAuth } from "@clerk/nextjs";
-import { descargarBlob, exportarPDF, exportarExcel, validarAdmin } from "@/lib/api";
-import { useSurveyFilters } from "@/hooks/useSurveyFilters";
-import { useSurveyStats } from "@/hooks/useSurveyStats";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { toast } from "sonner";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import { CommentsPanel } from "@/components/admin/CommentsPanel";
+import { DistributionCharts } from "@/components/admin/DistributionCharts";
+import { HourlyChart } from "@/components/admin/HourlyChart";
+import { KpiGrid } from "@/components/admin/KpiGrid";
+import { PriceInsights } from "@/components/admin/PriceInsights";
+import { SensorialSection } from "@/components/admin/SensorialSection";
+import { StatsFilters } from "@/components/admin/StatsFilters";
+import { Footer, Navbar } from "@/components/nutrilen/Navbar";
+import { PageLoader, useNavLoader } from "@/components/nutrilen/PageLoader";
 import { useAdminDashboardViewModel } from "@/hooks/useAdminDashboardViewModel";
 import { useCountUp } from "@/hooks/useCountUp";
-import { StatsFilters } from "@/components/admin/StatsFilters";
-import { KpiGrid } from "@/components/admin/KpiGrid";
-import { SensorialSection } from "@/components/admin/SensorialSection";
-import { HourlyChart } from "@/components/admin/HourlyChart";
-import { DistributionCharts } from "@/components/admin/DistributionCharts";
-import { CommentsPanel } from "@/components/admin/CommentsPanel";
-import { AdminHeader } from "@/components/admin/AdminHeader";
+import { useSurveyFilters } from "@/hooks/useSurveyFilters";
+import { useSurveyResumen } from "@/hooks/useSurveyResumen";
+import { useSurveyStats } from "@/hooks/useSurveyStats";
+import {
+  descargarBlob,
+  exportarExcel,
+  exportarPDF,
+  getUserFacingErrorMessage,
+  validarAdmin,
+} from "@/lib/api";
+
+const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 
 export default function AdminRoute() {
   return (
@@ -26,25 +36,25 @@ export default function AdminRoute() {
   );
 }
 
-function AdminGate() {
+export function AdminGate() {
+  if (TEST_AUTH_MODE) {
+    return <AdminTestGate />;
+  }
+
+  return <AdminClerkGate />;
+}
+
+function AdminClerkGate() {
+  const { isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    return <AdminAuthLoadingState />;
+  }
+
   return (
     <>
       <SignedOut>
-        <div className="flex min-h-screen items-center justify-center bg-[color:var(--background)] px-4">
-          <div className="w-full max-w-md">
-            <div className="mb-6 text-center">
-              <h1 className="font-serif text-2xl font-semibold text-foreground">TERRAVÉ · Panel admin</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Iniciá sesión para acceder a las estadísticas.</p>
-            </div>
-            <SignIn
-              routing="hash"
-              forceRedirectUrl="/administrador"
-              fallbackRedirectUrl="/administrador"
-              signUpForceRedirectUrl="/administrador"
-              signUpFallbackRedirectUrl="/administrador"
-            />
-          </div>
-        </div>
+        <AdminSignInState />
       </SignedOut>
       <SignedIn>
         <AdminAuthorized />
@@ -53,7 +63,103 @@ function AdminGate() {
   );
 }
 
-function AdminAuthorized() {
+function AdminAuthLoadingState() {
+  return (
+    <div className="flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-hidden bg-[color:var(--background)]">
+      <Navbar />
+      <main
+        id="main-content"
+        className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-4 py-10 sm:px-6"
+      >
+        <div className="w-full max-w-md rounded-3xl border border-border/70 bg-card/80 p-8 shadow-[var(--shadow-card)] backdrop-blur-sm">
+          <PageLoader show />
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function AdminSignInState() {
+  return (
+    <div className="flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-hidden bg-[color:var(--background)]">
+      <Navbar />
+      <main
+        id="main-content"
+        className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-12"
+      >
+        <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card)] sm:p-8">
+          <div className="mb-6 text-center">
+            <h1 className="font-serif text-2xl font-semibold text-foreground">TERRAVE | Panel admin</h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Inicia sesion para acceder a las estadisticas del proyecto.
+            </p>
+          </div>
+          <div className="mx-auto flex w-full justify-center">
+            <SignIn
+              routing="hash"
+              forceRedirectUrl="/administrador"
+              fallbackRedirectUrl="/administrador"
+              signUpForceRedirectUrl="/administrador"
+              signUpFallbackRedirectUrl="/administrador"
+              appearance={{
+                elements: {
+                  rootBox: "mx-auto flex w-full justify-center",
+                  cardBox: "w-full max-w-none shadow-none",
+                  card: "w-full max-w-none rounded-[1.75rem] border border-[color:var(--surface-border)]/70 bg-background/92 shadow-none",
+                  headerTitle: "hidden",
+                  headerSubtitle: "hidden",
+                  footerActionText: "text-sm",
+                  footerActionLink: "font-semibold text-[color:var(--pumpkin)]",
+                },
+              }}
+            />
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function AdminTestGate() {
+  const role = useSyncExternalStore(
+    () => () => {},
+    () => {
+      const storedRole = window.localStorage.getItem("nutrilen.e2eRole");
+      return storedRole === "admin" || storedRole === "client" ? storedRole : null;
+    },
+    () => null,
+  );
+
+  if (!role) {
+    return (
+      <div className="flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-hidden bg-[color:var(--background)]">
+        <Navbar />
+        <main
+          id="main-content"
+          className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-4 py-10 sm:px-6"
+        >
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-[var(--shadow-card)]">
+            <h1 className="font-serif text-2xl font-semibold text-foreground">TERRAVE | Panel admin</h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Inicia sesion para acceder a las estadisticas del proyecto.
+            </p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (role !== "admin") {
+    return <AdminRestrictedState />;
+  }
+
+  return <AdminPage />;
+}
+
+export function AdminAuthorized() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [isAuthorizing, setIsAuthorizing] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
@@ -82,7 +188,7 @@ function AdminAuthorized() {
 
   if (isAuthorizing) {
     return (
-      <div className="min-h-screen w-full bg-background text-foreground font-sans">
+      <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-background text-foreground font-sans">
         <Navbar />
         <PageLoader show />
       </div>
@@ -90,27 +196,31 @@ function AdminAuthorized() {
   }
 
   if (!hasAccess) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <Navbar />
-        <main className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-6 py-20">
-          <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
-            <h2 className="font-serif text-2xl font-semibold text-foreground">Esta sección es solo para el equipo TERRAVÉ</h2>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Tu cuenta no tiene permisos para visualizar el panel de estadísticas.
-              Si sos parte del equipo y necesitás acceso, contactá al administrador del proyecto.
-            </p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
+    return <AdminRestrictedState />;
   }
 
   return <AdminPage />;
 }
 
-function ClientOnly({
+function AdminRestrictedState() {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-6 py-20">
+        <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
+          <h2 className="font-serif text-2xl font-semibold text-foreground">Esta seccion es solo para el equipo TERRAVE</h2>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Tu cuenta no tiene permisos para visualizar el panel de estadisticas.
+            Si sos parte del equipo y necesitas acceso, contacta al administrador del proyecto.
+          </p>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+export function ClientOnly({
   children,
   fallback = null,
 }: {
@@ -120,14 +230,35 @@ function ClientOnly({
   return <>{children ?? fallback}</>;
 }
 
-function AdminPage() {
-  const { getToken } = useAuth();
+export function AdminPage() {
+  return TEST_AUTH_MODE ? <AdminPageTestMode /> : <AdminPageWithClerk />;
+}
+
+function AdminPageWithClerk() {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  return <AdminPageContent getToken={getToken} canLoadData={isLoaded && isSignedIn} />;
+}
+
+function AdminPageTestMode() {
+  return <AdminPageContent getToken={async () => "e2e-admin-token"} canLoadData />;
+}
+
+function AdminPageContent({
+  getToken,
+  canLoadData,
+}: {
+  getToken: () => Promise<string | null>;
+  canLoadData: boolean;
+}) {
   const { show: showLoader, run: runWithLoader, setShow: setLoader } = useNavLoader(1200);
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useSurveyFilters();
-  const { data, refresh: refreshStats } = useSurveyStats(filters);
+  const { summary, refresh: refreshSummary } = useSurveyResumen(filters, { getToken, isEnabled: canLoadData });
+  const { data, refresh: refreshStats } = useSurveyStats(filters, { getToken, isEnabled: canLoadData });
 
   const {
     total,
+    completedCount,
+    inProgressCount,
     sensorial,
     globalScore,
     acceptancePct,
@@ -137,11 +268,12 @@ function AdminPage() {
     peakHour,
     hasHourly,
     dietAcceptance,
+    priceSummary,
     bestAttr,
     worstAttr,
     descriptiveCommentsList,
     affectiveCommentsList,
-  } = useAdminDashboardViewModel(data);
+  } = useAdminDashboardViewModel(data, summary.inProgressCount);
 
   const animCount = useCountUp(acceptancePct);
 
@@ -161,7 +293,7 @@ function AdminPage() {
 
   function refresh() {
     runWithLoader(async () => {
-      await refreshStats();
+      await Promise.all([refreshStats(), refreshSummary()]);
     });
   }
 
@@ -177,39 +309,40 @@ function AdminPage() {
       });
       descargarBlob(blob, `terrave-dashboard-${Date.now()}.pdf`);
       toast.success("PDF descargado");
-    } catch {
-      toast.error("No se pudo exportar el PDF.");
+    } catch (error) {
+      toast.error(getUserFacingErrorMessage(error, "No se pudo exportar el PDF."));
     }
   }
 
   async function handleExportExcel() {
     try {
       const token = await getToken();
-      const blob = await exportarExcel(data, {
-        filters: {
-          diet: filters.diet,
-          sex: filters.sex,
-          from: filters.from || "",
-          to: filters.to || "",
+      const blob = await exportarExcel(
+        data,
+        {
+          filters: {
+            diet: filters.diet,
+            sex: filters.sex,
+            from: filters.from || "",
+            to: filters.to || "",
+          },
         },
-      }, token ?? undefined);
+        token ?? undefined,
+      );
       descargarBlob(blob, `terrave-encuestas-${Date.now()}.xlsx`);
       toast.success("Excel descargado");
     } catch (error) {
-      const message =
-        error instanceof Error && error.message
-          ? error.message
-          : "No se pudo exportar el archivo.";
-      console.error("Excel export error:", error);
+      const message = getUserFacingErrorMessage(error, "No se pudo exportar el archivo.");
+      console.warn(`Excel export error: ${message}`);
       toast.error(message);
     }
   }
 
   return (
-    <div className="min-h-screen w-full max-w-[100svw] overflow-x-hidden bg-background text-foreground font-sans">
+    <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-background text-foreground font-sans">
       <Navbar />
       <PageLoader show={showLoader} />
-      <main className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-7 sm:px-6 sm:py-10 lg:py-14">
+      <main id="main-content" className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-7 sm:px-6 sm:py-10 lg:py-14">
         <AdminHeader
           isRefreshing={showLoader}
           onRefresh={refresh}
@@ -226,7 +359,13 @@ function AdminPage() {
           onClear={clearFilters}
         />
 
-        <KpiGrid total={total} globalScore={globalScore} acceptancePct={acceptancePct} />
+        <KpiGrid
+          total={total}
+          completedCount={completedCount}
+          inProgressCount={inProgressCount}
+          globalScore={globalScore}
+          acceptancePct={acceptancePct}
+        />
         <DistributionCharts
           total={total}
           dietDist={dietDist}
@@ -235,6 +374,7 @@ function AdminPage() {
         />
         <HourlyChart hourlyDist={hourlyDist} hasHourly={hasHourly} peakHour={peakHour} />
         <SensorialSection sensorial={sensorial} />
+        <PriceInsights priceSummary={priceSummary} />
         <CommentsPanel
           descriptiveCommentsList={descriptiveCommentsList}
           affectiveCommentsList={affectiveCommentsList}
@@ -244,13 +384,8 @@ function AdminPage() {
           acceptancePct={acceptancePct}
           animCount={animCount}
         />
-
-        <p className="mt-8 text-center text-xs text-muted-foreground sm:text-right">
-          TERRAVÉ · Proyecto integrador ISI x Nutrición
-        </p>
       </main>
       <Footer />
     </div>
   );
 }
-

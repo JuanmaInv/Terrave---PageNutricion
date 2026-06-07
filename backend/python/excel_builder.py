@@ -186,6 +186,7 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
     descriptive_rows: list[str] = []
     affective_rows: list[str] = []
     pricing_rows: list[str] = []
+    pricing_values: list[float] = []
     for idx, s in enumerate(surveys, start=1):
         prefix = f"Participante {idx}: "
         d = str(s.get("descriptiveComments") or "").strip()
@@ -195,8 +196,23 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
             descriptive_rows.append(prefix + d)
         if p:
             pricing_rows.append(prefix + p)
+            pricing_values.append(safe_num(p, 0.0))
         if a:
             affective_rows.append(prefix + a)
+
+    pricing_values = [value for value in pricing_values if value > 0]
+    pricing_values.sort()
+    price_count = len(pricing_values)
+    price_avg = (sum(pricing_values) / price_count) if price_count else 0.0
+    price_median = 0.0
+    if price_count:
+        middle = price_count // 2
+        if price_count % 2 == 1:
+            price_median = pricing_values[middle]
+        else:
+            price_median = (pricing_values[middle - 1] + pricing_values[middle]) / 2
+    price_min = pricing_values[0] if price_count else 0.0
+    price_max = pricing_values[-1] if price_count else 0.0
 
     # Sheet 1: Resumen ejecutivo
     sh = wb.add_worksheet("Resumen")
@@ -257,6 +273,18 @@ def build_workbook(payload: dict[str, Any]) -> bytes:
             f"Aspecto a mejorar: {worst_label} ({worst_score:.2f}/5)."
         ),
         text_wrap_fmt,
+    )
+    sh.write("A27", "Respuestas de precio", text_fmt)
+    sh.write("B27", price_count, text_fmt)
+    sh.write("A28", "Precio promedio (ARS)", text_fmt)
+    sh.write("B28", price_avg, num_fmt)
+    sh.write("A29", "Precio mediano (ARS)", text_fmt)
+    sh.write("B29", price_median, num_fmt)
+    sh.write("A30", "Rango de precio (ARS)", text_fmt)
+    sh.write(
+        "B30",
+        f"{price_min:.0f} - {price_max:.0f}" if price_count else "Sin respuestas",
+        text_fmt,
     )
 
     # Charts in summary

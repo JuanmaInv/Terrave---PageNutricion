@@ -38,7 +38,6 @@ describe("Controladores HTTP", () => {
           isAdmin: false,
           isSuperAdmin: false,
           canAccessDashboard: false,
-          canManageUsers: false,
           canAnswerSurvey: true,
         };
       },
@@ -50,7 +49,6 @@ describe("Controladores HTTP", () => {
       isAdmin: false,
       isSuperAdmin: false,
       canAccessDashboard: false,
-      canManageUsers: false,
       canAnswerSurvey: true,
     });
   });
@@ -69,7 +67,6 @@ describe("Controladores HTTP", () => {
           isAdmin: false,
           isSuperAdmin: true,
           canAccessDashboard: false,
-          canManageUsers: true,
           canAnswerSurvey: false,
         };
       },
@@ -81,46 +78,11 @@ describe("Controladores HTTP", () => {
       isAdmin: false,
       isSuperAdmin: true,
       canAccessDashboard: false,
-      canManageUsers: true,
       canAnswerSurvey: false,
     });
   });
 
-  it("debe listar usuarios desde AdminController", async () => {
-    const controller = new AdminController({
-      async listUsers() {
-        return [{ id: "user-1", email: "admin@example.com", accessRole: "admin" }];
-      },
-    });
 
-    await expect(controller.listUsers()).resolves.toEqual([
-      { id: "user-1", email: "admin@example.com", accessRole: "admin" },
-    ]);
-  });
-
-  it("debe actualizar el rol de un usuario desde AdminController", async () => {
-    const controller = new AdminController({
-      async updateUserRole(userId, role) {
-        expect(userId).toBe("user-1");
-        expect(role).toBe("admin");
-        return {
-          id: "user-1",
-          email: "admin@example.com",
-          rol: "admin",
-          accessRole: "admin",
-          isSuperAdmin: false,
-        };
-      },
-    });
-
-    await expect(controller.updateUserRole("user-1", { role: "admin" })).resolves.toEqual({
-      id: "user-1",
-      email: "admin@example.com",
-      rol: "admin",
-      accessRole: "admin",
-      isSuperAdmin: false,
-    });
-  });
 
   it("debe mapear la respuesta de sesión creada en EncuestasController", async () => {
     const controller = new EncuestasController({

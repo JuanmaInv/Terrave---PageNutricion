@@ -86,7 +86,7 @@ describe("Roles y permisos del dashboard admin", () => {
   });
 
   it("debe permitir que el admin vea el dashboard aunque no haya datos", async () => {
-    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: true, isSuperAdmin: false });
+    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: true });
 
     render(<AdminAuthorized />);
 
@@ -97,7 +97,7 @@ describe("Roles y permisos del dashboard admin", () => {
   });
 
   it("debe impedir que un cliente o rol invalido acceda al dashboard admin", async () => {
-    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: false, isSuperAdmin: false });
+    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: false });
 
     render(<AdminAuthorized />);
 
@@ -112,7 +112,7 @@ describe("Roles y permisos del dashboard admin", () => {
       isLoaded: true,
       isSignedIn: true,
     });
-    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: false, isSuperAdmin: false });
+    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: false });
 
     render(<AdminAuthorized />);
 
@@ -121,13 +121,4 @@ describe("Roles y permisos del dashboard admin", () => {
     });
   });
 
-  it("debe bloquear al super admin en el dashboard y explicarle su alcance", async () => {
-    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: false, isSuperAdmin: true });
-
-    render(<AdminAuthorized />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/gestiona usuarios, no estadisticas/i)).toBeInTheDocument();
-    });
-  });
 });

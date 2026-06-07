@@ -35,23 +35,15 @@ type UsuarioRow = {
 
 export type AccessProfile = {
   email: string;
-  role: "super_admin" | "admin" | "cliente";
+  role: "admin" | "cliente";
   isAdmin: boolean;
-  isSuperAdmin: boolean;
   canAccessDashboard: boolean;
-  canManageUsers: boolean;
   canAnswerSurvey: boolean;
 };
 
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
-  private readonly superAdminEmails = new Set(
-    (process.env.SUPER_ADMIN_EMAILS?.trim() || "juanma.capito@gmail.com")
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter((email) => email.length > 0),
-  );
 
   constructor(private readonly db: DatabaseService) {}
 
@@ -70,9 +62,6 @@ export class AdminService {
 
     const profile = await this.resolveClerkProfile(token, secretKey);
     const email = profile.email;
-    if (this.isSuperAdminEmail(email)) {
-      throw new UnauthorizedException("Super admin access is restricted to user management");
-    }
 
     const isAdmin = await this.isAdmin(email);
     if (!isAdmin) {
@@ -95,37 +84,6 @@ export class AdminService {
     );
 
     return { isAdmin: true, email };
-  }
-
-  async validateSuperAdminToken(token: string): Promise<{ isSuperAdmin: boolean; email: string }> {
-    const secretKey = process.env.CLERK_SECRET_KEY;
-    if (!secretKey) {
-      throw new UnauthorizedException("Missing Clerk backend configuration");
-    }
-
-    const profile = await this.resolveClerkProfile(token, secretKey);
-    const email = profile.email;
-
-    if (!this.isSuperAdminEmail(email)) {
-      this.logger.warn(
-        JSON.stringify({
-          event: "super_admin_access_denied",
-          userId: profile.userId,
-          email: this.maskEmail(email),
-        }),
-      );
-      throw new UnauthorizedException("Super admin access required");
-    }
-
-    this.logger.log(
-      JSON.stringify({
-        event: "super_admin_access_granted",
-        userId: profile.userId,
-        email: this.maskEmail(email),
-      }),
-    );
-
-    return { isSuperAdmin: true, email };
   }
 
   async syncUserFromToken(token: string): Promise<AccessProfile> {
@@ -153,66 +111,7 @@ export class AdminService {
     return this.mapAccessProfile(user);
   }
 
-  async listUsers(): Promise<Array<UsuarioRow & { accessRole: AccessProfile["role"]; isSuperAdmin: boolean }>> {
-    const result = await this.db.query<UsuarioRow>(
-      `
-        SELECT id, nombre, email, rol, activo, fecha_registro
-        FROM public.usuarios
-        ORDER BY fecha_registro DESC NULLS LAST, email ASC
-      `,
-    );
 
-    return result.rows.map((user) => ({
-      ...user,
-      accessRole: this.resolveAccessRole(user),
-      isSuperAdmin: this.isSuperAdminEmail(user.email),
-    }));
-  }
-
-  async updateUserRole(
-    userId: string,
-    nextRole: "admin" | "cliente",
-  ): Promise<UsuarioRow & { accessRole: AccessProfile["role"]; isSuperAdmin: boolean }> {
-    const current = await this.db.query<UsuarioRow>(
-      `
-        SELECT id, nombre, email, rol, activo, fecha_registro
-        FROM public.usuarios
-        WHERE id = $1
-        LIMIT 1
-      `,
-      [userId],
-    );
-
-    const user = current.rows[0];
-    if (!user) {
-      throw new UnauthorizedException("User not found");
-    }
-
-    if (this.isSuperAdminEmail(user.email)) {
-      return {
-        ...user,
-        accessRole: "super_admin",
-        isSuperAdmin: true,
-      };
-    }
-
-    const updated = await this.db.query<UsuarioRow>(
-      `
-        UPDATE public.usuarios
-        SET rol = $2
-        WHERE id = $1
-        RETURNING id, nombre, email, rol, activo, fecha_registro
-      `,
-      [userId, nextRole],
-    );
-
-    const updatedUser = updated.rows[0];
-    return {
-      ...updatedUser,
-      accessRole: this.resolveAccessRole(updatedUser),
-      isSuperAdmin: false,
-    };
-  }
 
   private async resolveClerkProfile(token: string, secretKey: string): Promise<{
     userId: string;
@@ -299,7 +198,7 @@ export class AdminService {
     const result = await this.db.query<UsuarioRow>(
       `
         INSERT INTO public.usuarios (nombre, email, rol, activo)
-        VALUES ($1, $2, 'cliente', true)
+        VALUES ($1, $2, 'usuario', true)
         ON CONFLICT (email) DO UPDATE
         SET
           nombre = EXCLUDED.nombre,
@@ -318,22 +217,13 @@ export class AdminService {
       email: user.email,
       role,
       isAdmin: role === "admin",
-      isSuperAdmin: role === "super_admin",
       canAccessDashboard: role === "admin",
-      canManageUsers: role === "super_admin",
       canAnswerSurvey: role === "cliente",
     };
   }
 
   private resolveAccessRole(user: UsuarioRow): AccessProfile["role"] {
-    if (this.isSuperAdminEmail(user.email)) {
-      return "super_admin";
-    }
     return user.rol === "admin" && user.activo ? "admin" : "cliente";
-  }
-
-  private isSuperAdminEmail(email: string): boolean {
-    return this.superAdminEmails.has(email.trim().toLowerCase());
   }
 
   private async isAdminInDatabase(email: string): Promise<boolean> {

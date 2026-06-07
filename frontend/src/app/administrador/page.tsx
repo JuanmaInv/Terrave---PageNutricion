@@ -132,7 +132,7 @@ function AdminTestGate() {
     () => () => {},
     () => {
       const storedRole = window.localStorage.getItem("nutrilen.e2eRole");
-      return storedRole === "admin" || storedRole === "client" || storedRole === "super_admin"
+      return storedRole === "admin" || storedRole === "client"
         ? storedRole
         : null;
     },
@@ -166,7 +166,7 @@ function AdminTestGate() {
   }
 
   if (role !== "admin") {
-    return <AdminRestrictedState isSuperAdmin={role === "super_admin"} />;
+    return <AdminRestrictedState />;
   }
 
   return <AdminPage />;
@@ -175,9 +175,8 @@ function AdminTestGate() {
 export function AdminAuthorized() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [isAuthorizing, setIsAuthorizing] = useState(true);
-  const [accessState, setAccessState] = useState<{ isAdmin: boolean; isSuperAdmin: boolean }>({
+  const [accessState, setAccessState] = useState<{ isAdmin: boolean }>({
     isAdmin: false,
-    isSuperAdmin: false,
   });
 
   useEffect(() => {
@@ -191,12 +190,11 @@ export function AdminAuthorized() {
         if (isMounted) {
           setAccessState({
             isAdmin: Boolean(result?.isAdmin),
-            isSuperAdmin: Boolean(result?.isSuperAdmin),
           });
         }
       } catch {
         if (isMounted) {
-          setAccessState({ isAdmin: false, isSuperAdmin: false });
+          setAccessState({ isAdmin: false });
         }
       } finally {
         if (isMounted) setIsAuthorizing(false);
@@ -219,25 +217,23 @@ export function AdminAuthorized() {
   }
 
   if (!accessState.isAdmin) {
-    return <AdminRestrictedState isSuperAdmin={accessState.isSuperAdmin} />;
+    return <AdminRestrictedState />;
   }
 
   return <AdminPage />;
 }
 
-function AdminRestrictedState({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
+function AdminRestrictedState() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-6 py-20">
         <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
           <h2 className="font-serif text-2xl font-semibold text-foreground">
-            {isSuperAdmin ? "Tu cuenta gestiona usuarios, no estadisticas" : "Esta seccion es solo para el equipo TERRAVE"}
+            Esta seccion es solo para el equipo TERRAVE
           </h2>
           <p className="mt-3 text-sm text-muted-foreground">
-            {isSuperAdmin
-              ? "El super admin entra unicamente a la gestion de usuarios. Para revisar el dashboard debes usar una cuenta admin."
-              : "Tu cuenta no tiene permisos para visualizar el panel de estadisticas. Si sos parte del equipo y necesitas acceso, contacta al administrador del proyecto."}
+            Tu cuenta no tiene permisos para visualizar el panel de estadisticas. Si sos parte del equipo y necesitas acceso, contacta al administrador del proyecto.
           </p>
         </div>
       </main>

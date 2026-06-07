@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import { AdminController } from "./admin.controller";
 import { AdminService } from "./admin.service";
 import { AdminGuard } from "./guards/admin.guard";
-import { SuperAdminGuard } from "./guards/super-admin.guard";
 
 /**
  * AdminModule exports both AdminService and AdminGuard so other modules
@@ -11,7 +10,7 @@ import { SuperAdminGuard } from "./guards/super-admin.guard";
  */
 @Module({
   controllers: [AdminController],
-  providers: [AdminService, AdminGuard, SuperAdminGuard],
-  exports: [AdminService, AdminGuard, SuperAdminGuard],
+  providers: [AdminService, AdminGuard],
+  exports: [AdminService, AdminGuard],
 })
 export class AdminModule {}

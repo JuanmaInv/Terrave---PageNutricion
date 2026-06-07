@@ -85,17 +85,10 @@ function NavbarWithClerk({ reserveSpace = true }: { reserveSpace?: boolean }) {
   return (
     <NavbarContent
       reserveSpace={reserveSpace}
-      hidePublicLinks={Boolean(accessProfile?.isAdmin || accessProfile?.isSuperAdmin)}
+      hidePublicLinks={Boolean(accessProfile?.isAdmin)}
       adminShortcut={
         <SignedIn>
-          {accessProfile?.isSuperAdmin ? (
-            <Link
-              href="/super-admin"
-              className="inline-flex items-center justify-center rounded-full border border-white/12 bg-[#a7aa3f] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
-            >
-              Gestion usuarios
-            </Link>
-          ) : accessProfile?.isAdmin ? (
+          {accessProfile?.isAdmin ? (
             <Link
               href="/administrador"
               className="inline-flex items-center justify-center rounded-full border border-white/12 bg-[#a7aa3f] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
@@ -136,8 +129,7 @@ function NavbarContent({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/administrador");
-  const isSuperAdmin = pathname.startsWith("/super-admin");
-  const isPrivilegedArea = isAdmin || isSuperAdmin;
+  const isPrivilegedArea = isAdmin;
   const links = isPrivilegedArea || hidePublicLinks ? [] : publicLinks;
   const { dark, toggle } = useDarkMode();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -175,7 +167,7 @@ function NavbarContent({
         <div className="relative mx-auto max-w-6xl px-4 py-3 sm:px-6">
           <div className="flex min-h-16 items-center justify-between gap-4">
           <Link
-            href={isSuperAdmin ? "/super-admin" : isAdmin ? "/administrador" : "/"}
+            href={isAdmin ? "/administrador" : "/"}
             className="group flex min-w-0 items-center gap-3"
             onClick={closeMobileMenu}
           >
@@ -188,7 +180,7 @@ function NavbarContent({
               </span>
               {isPrivilegedArea ? (
                 <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[color:var(--cream)]/74 dark:text-[#bcc45c]">
-                  {isSuperAdmin ? "Gestion de usuarios" : "Panel administrativo"}
+                  {"Panel administrativo"}
                 </span>
               ) : null}
             </span>

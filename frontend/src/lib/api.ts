@@ -90,11 +90,9 @@ export interface DashboardSummary {
 
 export interface AccessProfile {
   email: string;
-  role: "super_admin" | "admin" | "cliente";
+  role: "admin" | "cliente";
   isAdmin: boolean;
-  isSuperAdmin: boolean;
   canAccessDashboard: boolean;
-  canManageUsers: boolean;
   canAnswerSurvey: boolean;
 }
 
@@ -339,51 +337,7 @@ export async function obtenerPerfilAcceso(token?: string): Promise<AccessProfile
   });
 }
 
-export async function listarUsuariosAdmin(token?: string): Promise<
-  Array<{
-    id: string;
-    nombre: string;
-    email: string;
-    rol: string;
-    activo: boolean;
-    fecha_registro?: string;
-    accessRole: AccessProfile["role"];
-    isSuperAdmin: boolean;
-  }>
-> {
-  if (!hasBackend() || !token) {
-    throw new Error("Backend no configurado.");
-  }
 
-  return await request("/admin/users", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function actualizarRolUsuarioAdmin(
-  userId: string,
-  role: "admin" | "cliente",
-  token?: string,
-): Promise<{
-  id: string;
-  nombre: string;
-  email: string;
-  rol: string;
-  activo: boolean;
-  fecha_registro?: string;
-  accessRole: AccessProfile["role"];
-  isSuperAdmin: boolean;
-}> {
-  if (!hasBackend() || !token) {
-    throw new Error("Backend no configurado.");
-  }
-
-  return await request(`/admin/users/${userId}/role`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ role }),
-  });
-}
 
 export async function exportarPDF(
   surveys: SurveyResponse[],

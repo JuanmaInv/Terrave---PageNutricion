@@ -36,11 +36,6 @@ export function useRedirectAdminToDashboard() {
 
         if (!isMounted) return;
 
-        if (result?.isSuperAdmin && pathname !== "/super-admin") {
-          router.replace("/super-admin");
-          return;
-        }
-
         if (result?.isAdmin && pathname !== "/administrador") {
           router.replace("/administrador");
           return;

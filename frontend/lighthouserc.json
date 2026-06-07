@@ -6,9 +6,9 @@
       "startServerReadyPattern": "Local:",
       "startServerReadyTimeout": 120000,
       "url": [
-        "http://127.0.0.1:3001/",
-        "http://127.0.0.1:3001/encuesta",
-        "http://127.0.0.1:3001/administrador"
+        "http://localhost:3001/",
+        "http://localhost:3001/encuesta",
+        "http://localhost:3001/administrador"
       ]
     },
     "assert": {

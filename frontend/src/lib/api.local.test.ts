@@ -3,10 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const loadSurveys = vi.fn();
 const saveSurvey = vi.fn();
 
-vi.mock("./nutrilen", () => ({
-  loadSurveys,
-  saveSurvey,
-}));
+vi.mock("./nutrilen", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./nutrilen")>();
+  return {
+    ...actual,
+    loadSurveys,
+    saveSurvey,
+  };
+});
 
 describe("Fallback local de la API", () => {
   beforeEach(() => {

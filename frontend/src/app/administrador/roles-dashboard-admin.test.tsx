@@ -3,9 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminAuthorized } from "./page";
 
-const { useAuth, validarAdmin, useSurveyStats, useSurveyResumen } = vi.hoisted(() => ({
+const { useAuth, obtenerPerfilAcceso, useSurveyStats, useSurveyResumen } = vi.hoisted(() => ({
   useAuth: vi.fn(),
-  validarAdmin: vi.fn(),
+  obtenerPerfilAcceso: vi.fn(),
   useSurveyStats: vi.fn(),
   useSurveyResumen: vi.fn(),
 }));
@@ -17,7 +17,7 @@ vi.mock("@clerk/nextjs", () => ({
   SignIn: () => <div>Clerk SignIn</div>,
 }));
 vi.mock("@/lib/api", () => ({
-  validarAdmin,
+  obtenerPerfilAcceso,
   exportarPDF: vi.fn(),
   exportarExcel: vi.fn(),
   descargarBlob: vi.fn(),
@@ -86,7 +86,7 @@ describe("Roles y permisos del dashboard admin", () => {
   });
 
   it("debe permitir que el admin vea el dashboard aunque no haya datos", async () => {
-    validarAdmin.mockResolvedValue({ isAdmin: true });
+    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: true, isSuperAdmin: false });
 
     render(<AdminAuthorized />);
 
@@ -97,7 +97,7 @@ describe("Roles y permisos del dashboard admin", () => {
   });
 
   it("debe impedir que un cliente o rol invalido acceda al dashboard admin", async () => {
-    validarAdmin.mockResolvedValue({ isAdmin: false });
+    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: false, isSuperAdmin: false });
 
     render(<AdminAuthorized />);
 
@@ -112,12 +112,22 @@ describe("Roles y permisos del dashboard admin", () => {
       isLoaded: true,
       isSignedIn: true,
     });
-    validarAdmin.mockResolvedValue({ isAdmin: false });
+    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: false, isSuperAdmin: false });
 
     render(<AdminAuthorized />);
 
     await waitFor(() => {
       expect(screen.getByText(/Tu cuenta no tiene permisos/i)).toBeInTheDocument();
+    });
+  });
+
+  it("debe bloquear al super admin en el dashboard y explicarle su alcance", async () => {
+    obtenerPerfilAcceso.mockResolvedValue({ isAdmin: false, isSuperAdmin: true });
+
+    render(<AdminAuthorized />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/gestiona usuarios, no estadisticas/i)).toBeInTheDocument();
     });
   });
 });

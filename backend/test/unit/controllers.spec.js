@@ -32,7 +32,15 @@ describe("Controladores HTTP", () => {
       },
       async syncUserFromToken(token) {
         expect(token).toBe("token-1");
-        return { email: "user@example.com", role: "cliente", isAdmin: false };
+        return {
+          email: "user@example.com",
+          role: "cliente",
+          isAdmin: false,
+          isSuperAdmin: false,
+          canAccessDashboard: false,
+          canManageUsers: false,
+          canAnswerSurvey: true,
+        };
       },
     });
 
@@ -40,6 +48,77 @@ describe("Controladores HTTP", () => {
       email: "user@example.com",
       role: "cliente",
       isAdmin: false,
+      isSuperAdmin: false,
+      canAccessDashboard: false,
+      canManageUsers: false,
+      canAnswerSurvey: true,
+    });
+  });
+
+  it("debe devolver el perfil de acceso del usuario autenticado", async () => {
+    const controller = new AdminController({
+      getTokenFromAuthorization(authorization) {
+        expect(authorization).toBe("Bearer token-2");
+        return "token-2";
+      },
+      async getAccessProfileFromToken(token) {
+        expect(token).toBe("token-2");
+        return {
+          email: "juanma.capito@gmail.com",
+          role: "super_admin",
+          isAdmin: false,
+          isSuperAdmin: true,
+          canAccessDashboard: false,
+          canManageUsers: true,
+          canAnswerSurvey: false,
+        };
+      },
+    });
+
+    await expect(controller.getAccess("Bearer token-2")).resolves.toEqual({
+      email: "juanma.capito@gmail.com",
+      role: "super_admin",
+      isAdmin: false,
+      isSuperAdmin: true,
+      canAccessDashboard: false,
+      canManageUsers: true,
+      canAnswerSurvey: false,
+    });
+  });
+
+  it("debe listar usuarios desde AdminController", async () => {
+    const controller = new AdminController({
+      async listUsers() {
+        return [{ id: "user-1", email: "admin@example.com", accessRole: "admin" }];
+      },
+    });
+
+    await expect(controller.listUsers()).resolves.toEqual([
+      { id: "user-1", email: "admin@example.com", accessRole: "admin" },
+    ]);
+  });
+
+  it("debe actualizar el rol de un usuario desde AdminController", async () => {
+    const controller = new AdminController({
+      async updateUserRole(userId, role) {
+        expect(userId).toBe("user-1");
+        expect(role).toBe("admin");
+        return {
+          id: "user-1",
+          email: "admin@example.com",
+          rol: "admin",
+          accessRole: "admin",
+          isSuperAdmin: false,
+        };
+      },
+    });
+
+    await expect(controller.updateUserRole("user-1", { role: "admin" })).resolves.toEqual({
+      id: "user-1",
+      email: "admin@example.com",
+      rol: "admin",
+      accessRole: "admin",
+      isSuperAdmin: false,
     });
   });
 

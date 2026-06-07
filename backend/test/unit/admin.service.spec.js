@@ -179,6 +179,10 @@ describe("Servicio de administracion", () => {
       email: "user@example.com",
       role: "cliente",
       isAdmin: false,
+      isSuperAdmin: false,
+      canAccessDashboard: false,
+      canManageUsers: false,
+      canAnswerSurvey: true,
     });
     process.env.CLERK_SECRET_KEY = originalSecret;
   });
@@ -235,6 +239,109 @@ describe("Servicio de administracion", () => {
 
     await expect(service.verifyClerkJwt("token-invalido", "sk_test_123")).rejects.toBeInstanceOf(
       Error,
+    );
+  });
+  it("debe identificar al super admin por correo y excluirlo del dashboard", async () => {
+    const originalSecret = process.env.CLERK_SECRET_KEY;
+    process.env.CLERK_SECRET_KEY = "sk_test_123";
+    const service = new AdminService({
+      async query() {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              id: "user-1",
+              nombre: "Juanma",
+              email: "juanma.capito@gmail.com",
+              rol: "cliente",
+              activo: true,
+            },
+          ],
+        };
+      },
+    });
+    service.verifyClerkJwt = vi.fn().mockResolvedValue({ sub: "user_123" });
+    service.buildClerkClient = vi.fn(() => ({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          firstName: "Juanma",
+          lastName: "Capito",
+          primaryEmailAddress: { emailAddress: "juanma.capito@gmail.com" },
+        }),
+      },
+    }));
+
+    await expect(service.syncUserFromToken("token")).resolves.toEqual({
+      email: "juanma.capito@gmail.com",
+      role: "super_admin",
+      isAdmin: false,
+      isSuperAdmin: true,
+      canAccessDashboard: false,
+      canManageUsers: true,
+      canAnswerSurvey: false,
+    });
+    await expect(service.validateAdminToken("token")).rejects.toThrow(/Super admin access is restricted/i);
+    await expect(service.validateSuperAdminToken("token")).resolves.toEqual({
+      isSuperAdmin: true,
+      email: "juanma.capito@gmail.com",
+    });
+    process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
+  it("debe listar usuarios con el rol de acceso derivado", async () => {
+    const service = new AdminService({
+      async query() {
+        return {
+          rowCount: 2,
+          rows: [
+            {
+              id: "user-1",
+              nombre: "Admin",
+              email: "admin@example.com",
+              rol: "admin",
+              activo: true,
+              fecha_registro: "2026-06-07T12:00:00.000Z",
+            },
+            {
+              id: "user-2",
+              nombre: "Juanma",
+              email: "juanma.capito@gmail.com",
+              rol: "cliente",
+              activo: true,
+              fecha_registro: "2026-06-07T13:00:00.000Z",
+            },
+          ],
+        };
+      },
+    });
+
+    await expect(service.listUsers()).resolves.toEqual([
+      expect.objectContaining({ email: "admin@example.com", accessRole: "admin", isSuperAdmin: false }),
+      expect.objectContaining({ email: "juanma.capito@gmail.com", accessRole: "super_admin", isSuperAdmin: true }),
+    ]);
+  });
+
+  it("debe actualizar el rol de un usuario comun", async () => {
+    let step = 0;
+    const service = new AdminService({
+      async query(_sql, values) {
+        step += 1;
+        if (step === 1) {
+          expect(values[0]).toBe("user-1");
+          return {
+            rowCount: 1,
+            rows: [{ id: "user-1", nombre: "Cliente", email: "user@example.com", rol: "cliente", activo: true }],
+          };
+        }
+        return {
+          rowCount: 1,
+          rows: [{ id: "user-1", nombre: "Cliente", email: "user@example.com", rol: "admin", activo: true }],
+        };
+      },
+    });
+
+    await expect(service.updateUserRole("user-1", "admin")).resolves.toEqual(
+      expect.objectContaining({ email: "user@example.com", rol: "admin", accessRole: "admin", isSuperAdmin: false }),
     );
   });
 });

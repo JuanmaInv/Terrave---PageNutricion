@@ -24,8 +24,7 @@ import {
   exportarExcel,
   exportarPDF,
   getUserFacingErrorMessage,
-  sincronizarUsuarioClerk,
-  validarAdmin,
+  obtenerPerfilAcceso,
 } from "@/lib/api";
 
 export default function AdminRoute() {
@@ -133,7 +132,9 @@ function AdminTestGate() {
     () => () => {},
     () => {
       const storedRole = window.localStorage.getItem("nutrilen.e2eRole");
-      return storedRole === "admin" || storedRole === "client" ? storedRole : null;
+      return storedRole === "admin" || storedRole === "client" || storedRole === "super_admin"
+        ? storedRole
+        : null;
     },
     () => null,
   );
@@ -165,7 +166,7 @@ function AdminTestGate() {
   }
 
   if (role !== "admin") {
-    return <AdminRestrictedState />;
+    return <AdminRestrictedState isSuperAdmin={role === "super_admin"} />;
   }
 
   return <AdminPage />;
@@ -174,7 +175,10 @@ function AdminTestGate() {
 export function AdminAuthorized() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [isAuthorizing, setIsAuthorizing] = useState(true);
-  const [hasAccess, setHasAccess] = useState(false);
+  const [accessState, setAccessState] = useState<{ isAdmin: boolean; isSuperAdmin: boolean }>({
+    isAdmin: false,
+    isSuperAdmin: false,
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -183,11 +187,17 @@ export function AdminAuthorized() {
       if (!isLoaded || !isSignedIn) return;
       try {
         const token = await getToken();
-        await sincronizarUsuarioClerk(token ?? undefined);
-        const result = await validarAdmin(token ?? undefined);
-        if (isMounted) setHasAccess(result.isAdmin);
+        const result = await obtenerPerfilAcceso(token ?? undefined);
+        if (isMounted) {
+          setAccessState({
+            isAdmin: Boolean(result?.isAdmin),
+            isSuperAdmin: Boolean(result?.isSuperAdmin),
+          });
+        }
       } catch {
-        if (isMounted) setHasAccess(false);
+        if (isMounted) {
+          setAccessState({ isAdmin: false, isSuperAdmin: false });
+        }
       } finally {
         if (isMounted) setIsAuthorizing(false);
       }
@@ -208,23 +218,26 @@ export function AdminAuthorized() {
     );
   }
 
-  if (!hasAccess) {
-    return <AdminRestrictedState />;
+  if (!accessState.isAdmin) {
+    return <AdminRestrictedState isSuperAdmin={accessState.isSuperAdmin} />;
   }
 
   return <AdminPage />;
 }
 
-function AdminRestrictedState() {
+function AdminRestrictedState({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-6 py-20">
         <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-[var(--shadow-card)]">
-          <h2 className="font-serif text-2xl font-semibold text-foreground">Esta seccion es solo para el equipo TERRAVE</h2>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">
+            {isSuperAdmin ? "Tu cuenta gestiona usuarios, no estadisticas" : "Esta seccion es solo para el equipo TERRAVE"}
+          </h2>
           <p className="mt-3 text-sm text-muted-foreground">
-            Tu cuenta no tiene permisos para visualizar el panel de estadisticas.
-            Si sos parte del equipo y necesitas acceso, contacta al administrador del proyecto.
+            {isSuperAdmin
+              ? "El super admin entra unicamente a la gestion de usuarios. Para revisar el dashboard debes usar una cuenta admin."
+              : "Tu cuenta no tiene permisos para visualizar el panel de estadisticas. Si sos parte del equipo y necesitas acceso, contacta al administrador del proyecto."}
           </p>
         </div>
       </main>

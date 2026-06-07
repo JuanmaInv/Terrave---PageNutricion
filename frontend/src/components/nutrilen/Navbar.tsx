@@ -5,7 +5,7 @@ import { Menu, Moon, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { sincronizarUsuarioClerk, validarAdmin } from "@/lib/api";
+import { obtenerPerfilAcceso, type AccessProfile } from "@/lib/api";
 import { AUTH_ENABLED } from "@/lib/auth";
 import { TerraveMark } from "./TerraveMark";
 
@@ -55,28 +55,27 @@ function NavbarWithClerk({ reserveSpace = true }: { reserveSpace?: boolean }) {
   const router = useRouter();
   const { signOut } = useClerk();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [accessProfile, setAccessProfile] = useState<AccessProfile | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function resolveAdmin() {
+    async function resolveAccess() {
       if (!isLoaded || !isSignedIn) {
-        if (isMounted) setIsAdminUser(false);
+        if (isMounted) setAccessProfile(null);
         return;
       }
 
       try {
         const token = await getToken();
-        await sincronizarUsuarioClerk(token ?? undefined);
-        const result = await validarAdmin(token ?? undefined);
-        if (isMounted) setIsAdminUser(result.isAdmin);
+        const result = await obtenerPerfilAcceso(token ?? undefined);
+        if (isMounted) setAccessProfile(result);
       } catch {
-        if (isMounted) setIsAdminUser(false);
+        if (isMounted) setAccessProfile(null);
       }
     }
 
-    resolveAdmin();
+    resolveAccess();
 
     return () => {
       isMounted = false;
@@ -86,9 +85,17 @@ function NavbarWithClerk({ reserveSpace = true }: { reserveSpace?: boolean }) {
   return (
     <NavbarContent
       reserveSpace={reserveSpace}
+      hidePublicLinks={Boolean(accessProfile?.isAdmin || accessProfile?.isSuperAdmin)}
       adminShortcut={
         <SignedIn>
-          {isAdminUser ? (
+          {accessProfile?.isSuperAdmin ? (
+            <Link
+              href="/super-admin"
+              className="inline-flex items-center justify-center rounded-full border border-white/12 bg-[#a7aa3f] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
+            >
+              Gestion usuarios
+            </Link>
+          ) : accessProfile?.isAdmin ? (
             <Link
               href="/administrador"
               className="inline-flex items-center justify-center rounded-full border border-white/12 bg-[#a7aa3f] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
@@ -118,16 +125,20 @@ function NavbarWithClerk({ reserveSpace = true }: { reserveSpace?: boolean }) {
 
 function NavbarContent({
   reserveSpace = true,
+  hidePublicLinks = false,
   adminShortcut,
   adminActions,
 }: {
   reserveSpace?: boolean;
+  hidePublicLinks?: boolean;
   adminShortcut?: React.ReactNode;
   adminActions?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/administrador");
-  const links = isAdmin ? [] : publicLinks;
+  const isSuperAdmin = pathname.startsWith("/super-admin");
+  const isPrivilegedArea = isAdmin || isSuperAdmin;
+  const links = isPrivilegedArea || hidePublicLinks ? [] : publicLinks;
   const { dark, toggle } = useDarkMode();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mounted = useSyncExternalStore(
@@ -164,7 +175,7 @@ function NavbarContent({
         <div className="relative mx-auto max-w-6xl px-4 py-3 sm:px-6">
           <div className="flex min-h-16 items-center justify-between gap-4">
           <Link
-            href={isAdmin ? "/administrador" : "/"}
+            href={isSuperAdmin ? "/super-admin" : isAdmin ? "/administrador" : "/"}
             className="group flex min-w-0 items-center gap-3"
             onClick={closeMobileMenu}
           >
@@ -175,9 +186,9 @@ function NavbarContent({
               <span className="block truncate font-serif text-2xl font-semibold tracking-tight text-[color:var(--cream)] drop-shadow-[0_1px_1px_rgba(39,18,11,0.3)] dark:text-[#cfd56d] dark:drop-shadow-[0_2px_14px_rgba(184,196,88,0.34)]">
                 TERRAVE
               </span>
-              {isAdmin ? (
+              {isPrivilegedArea ? (
                 <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[color:var(--cream)]/74 dark:text-[#bcc45c]">
-                  Panel administrativo
+                  {isSuperAdmin ? "Gestion de usuarios" : "Panel administrativo"}
                 </span>
               ) : null}
             </span>
@@ -204,8 +215,8 @@ function NavbarContent({
                   </Link>
                 );
               })}
-              {!isAdmin ? adminShortcut ?? null : null}
-              {isAdmin ? adminActions ?? null : null}
+              {!isPrivilegedArea ? adminShortcut ?? null : null}
+              {isPrivilegedArea ? adminActions ?? null : null}
             </nav>
 
             <button
@@ -269,13 +280,13 @@ function NavbarContent({
                 );
               })}
 
-              {!isAdmin ? (
+              {!isPrivilegedArea ? (
                 <div onClick={closeMobileMenu} className="contents">
                   {adminShortcut ?? null}
                 </div>
               ) : null}
 
-              {isAdmin ? adminActions ?? null : null}
+              {isPrivilegedArea ? adminActions ?? null : null}
             </nav>
           </div>
         </div>

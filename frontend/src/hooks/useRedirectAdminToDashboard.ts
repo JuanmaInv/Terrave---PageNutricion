@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { sincronizarUsuarioClerk, validarAdmin } from "@/lib/api";
+import { obtenerPerfilAcceso } from "@/lib/api";
 import { AUTH_ENABLED } from "@/lib/auth";
 
 export function useRedirectAdminToDashboard() {
@@ -32,12 +32,16 @@ export function useRedirectAdminToDashboard() {
 
       try {
         const token = await getToken();
-        await sincronizarUsuarioClerk(token ?? undefined);
-        const result = await validarAdmin(token ?? undefined);
+        const result = await obtenerPerfilAcceso(token ?? undefined);
 
         if (!isMounted) return;
 
-        if (result.isAdmin && pathname !== "/administrador") {
+        if (result?.isSuperAdmin && pathname !== "/super-admin") {
+          router.replace("/super-admin");
+          return;
+        }
+
+        if (result?.isAdmin && pathname !== "/administrador") {
           router.replace("/administrador");
           return;
         }

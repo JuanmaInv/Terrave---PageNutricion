@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
 -- No se insertan administradores hardcodeados en el esquema base.
 -- El alta de usuarios con rol 'admin' debe hacerse por migracion de entorno
 -- o flujo administrativo autenticado.
+-- El perfil 'super_admin' no se persiste como rol de tabla: se deriva por
+-- correo autorizado en backend para la rama main.
 
 -- 2. Tabla de Encuestas Sensoriales (Resultados de las Evaluaciones)
 -- Nota: usuario_id es nullable; las encuestas son anonimas por diseno.

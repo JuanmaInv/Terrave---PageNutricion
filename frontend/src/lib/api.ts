@@ -88,6 +88,16 @@ export interface DashboardSummary {
   inProgressCount: number;
 }
 
+export interface AccessProfile {
+  email: string;
+  role: "super_admin" | "admin" | "cliente";
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  canAccessDashboard: boolean;
+  canManageUsers: boolean;
+  canAnswerSurvey: boolean;
+}
+
 export interface SurveySessionDraft {
   clientSessionKey: string;
   currentStep?: number;
@@ -308,7 +318,7 @@ export async function validarAdmin(
 
 export async function sincronizarUsuarioClerk(
   token?: string,
-): Promise<{ email: string; role: string; isAdmin: boolean } | null> {
+): Promise<AccessProfile | null> {
   if (!hasBackend() || !token) {
     return null;
   }
@@ -316,6 +326,62 @@ export async function sincronizarUsuarioClerk(
   return await request("/admin/sync-user", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function obtenerPerfilAcceso(token?: string): Promise<AccessProfile | null> {
+  if (!hasBackend() || !token) {
+    return null;
+  }
+
+  return await request("/admin/access", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function listarUsuariosAdmin(token?: string): Promise<
+  Array<{
+    id: string;
+    nombre: string;
+    email: string;
+    rol: string;
+    activo: boolean;
+    fecha_registro?: string;
+    accessRole: AccessProfile["role"];
+    isSuperAdmin: boolean;
+  }>
+> {
+  if (!hasBackend() || !token) {
+    throw new Error("Backend no configurado.");
+  }
+
+  return await request("/admin/users", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function actualizarRolUsuarioAdmin(
+  userId: string,
+  role: "admin" | "cliente",
+  token?: string,
+): Promise<{
+  id: string;
+  nombre: string;
+  email: string;
+  rol: string;
+  activo: boolean;
+  fecha_registro?: string;
+  accessRole: AccessProfile["role"];
+  isSuperAdmin: boolean;
+}> {
+  if (!hasBackend() || !token) {
+    throw new Error("Backend no configurado.");
+  }
+
+  return await request(`/admin/users/${userId}/role`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ role }),
   });
 }
 

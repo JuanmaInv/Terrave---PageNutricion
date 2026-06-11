@@ -82,11 +82,28 @@ export class AdminService {
     }
 
     const profile = await this.resolveClerkProfile(token, secretKey);
-    const user = await this.upsertUser(profile);
+    const user = await this.findUserByEmail(profile.email);
+
+    if (!user) {
+      this.logger.warn(
+        JSON.stringify({
+          event: "user_not_found_for_beta_access",
+          email: this.maskEmail(profile.email),
+        })
+      );
+
+      return {
+        email: profile.email,
+        role: "cliente",
+        isAdmin: false,
+        canAccessDashboard: false,
+        canAnswerSurvey: true,
+      };
+    }
 
     this.logger.log(
       JSON.stringify({
-        event: "user_synced_from_clerk",
+        event: "user_loaded_from_database",
         email: this.maskEmail(user.email),
         role: user.rol,
       })
@@ -135,29 +152,18 @@ export class AdminService {
     };
   }
 
-  private async upsertUser(profile: {
-    email: string;
-    name: string;
-  }): Promise<UsuarioRow> {
+  private async findUserByEmail(email: string): Promise<UsuarioRow | null> {
     const result = await this.db.query<UsuarioRow>(
       `
-        INSERT INTO public.usuarios (nombre, email, rol, activo)
-        VALUES ($1, $2, 'cliente', true)
-        ON CONFLICT (email) DO UPDATE
-        SET
-          nombre = EXCLUDED.nombre,
-          activo = true
-        RETURNING id, nombre, email, rol, activo
+        SELECT id, nombre, email, rol, activo
+        FROM public.usuarios
+        WHERE lower(email) = $1
+        LIMIT 1
       `,
-      [profile.name, profile.email]
+      [email]
     );
 
-    const user = result.rows[0];
-    if (!user) {
-      throw new UnauthorizedException("No se pudo sincronizar el usuario.");
-    }
-
-    return user;
+    return result.rows[0] ?? null;
   }
 
   private mapAccessProfile(user: UsuarioRow): AccessProfile {

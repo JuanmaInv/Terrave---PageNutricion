@@ -96,4 +96,4 @@ describe("Validación de encuesta", () => {
   it("debe normalizar el monto estimado a solo dígitos", () => {
     expect(sanitizeWillingnessToPay("$ 4.500 pesos")).toBe("4500");
   });
-}
+});

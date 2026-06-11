@@ -5,10 +5,9 @@ import { Menu, Moon, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { validarAdmin } from "@/lib/api";
+import { obtenerPerfilAcceso, type AccessProfile } from "@/lib/api";
+import { AUTH_ENABLED } from "@/lib/auth";
 import { TerraveMark } from "./TerraveMark";
-
-const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 
 const publicLinks = [
   { href: "/", label: "Inicio" },
@@ -45,7 +44,7 @@ function useDarkMode() {
 }
 
 export function Navbar() {
-  if (TEST_AUTH_MODE) {
+  if (!AUTH_ENABLED) {
     return <NavbarContent />;
   }
 
@@ -56,27 +55,27 @@ function NavbarWithClerk() {
   const router = useRouter();
   const { signOut } = useClerk();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [accessProfile, setAccessProfile] = useState<AccessProfile | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function resolveAdmin() {
+    async function resolveAccess() {
       if (!isLoaded || !isSignedIn) {
-        if (isMounted) setIsAdminUser(false);
+        if (isMounted) setAccessProfile(null);
         return;
       }
 
       try {
         const token = await getToken();
-        const result = await validarAdmin(token ?? undefined);
-        if (isMounted) setIsAdminUser(result.isAdmin);
+        const result = await obtenerPerfilAcceso(token ?? undefined);
+        if (isMounted) setAccessProfile(result);
       } catch {
-        if (isMounted) setIsAdminUser(false);
+        if (isMounted) setAccessProfile(null);
       }
     }
 
-    resolveAdmin();
+    resolveAccess();
 
     return () => {
       isMounted = false;
@@ -85,9 +84,10 @@ function NavbarWithClerk() {
 
   return (
     <NavbarContent
+      hidePublicLinks={Boolean(accessProfile?.isAdmin)}
       adminShortcut={
         <SignedIn>
-          {isAdminUser ? (
+          {accessProfile?.isAdmin ? (
             <Link
               href="/administrador"
               className="inline-flex items-center justify-center rounded-full border border-white/12 bg-[color:var(--moss)] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(160,163,49,0.9)] transition hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[color:var(--pumpkin)]/55"
@@ -116,15 +116,17 @@ function NavbarWithClerk() {
 }
 
 function NavbarContent({
+  hidePublicLinks = false,
   adminShortcut,
   adminActions,
 }: {
+  hidePublicLinks?: boolean;
   adminShortcut?: React.ReactNode;
   adminActions?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/administrador");
-  const links = isAdmin ? [] : publicLinks;
+  const links = isAdmin || hidePublicLinks ? [] : publicLinks;
   const { dark, toggle } = useDarkMode();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mounted = useSyncExternalStore(

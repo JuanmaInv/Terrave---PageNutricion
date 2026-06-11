@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
+import { AUTH_ENABLED } from "@/lib/auth";
 
-const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
-
-const proxy = TEST_AUTH_MODE
-  ? () => NextResponse.next()
-  : clerkMiddleware();
+const proxy = AUTH_ENABLED
+  ? clerkMiddleware()
+  : () => NextResponse.next();
 
 export default proxy;
 

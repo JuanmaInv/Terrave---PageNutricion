@@ -3,18 +3,17 @@
 import { useAuth } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { validarAdmin } from "@/lib/api";
-
-const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
+import { obtenerPerfilAcceso } from "@/lib/api";
+import { AUTH_ENABLED } from "@/lib/auth";
 
 export function useRedirectAdminToDashboard() {
   const router = useRouter();
   const pathname = usePathname();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [isCheckingRedirect, setIsCheckingRedirect] = useState(() => !TEST_AUTH_MODE);
+  const [isCheckingRedirect, setIsCheckingRedirect] = useState(() => AUTH_ENABLED);
 
   useEffect(() => {
-    if (TEST_AUTH_MODE) {
+    if (!AUTH_ENABLED) {
       return;
     }
 
@@ -33,11 +32,11 @@ export function useRedirectAdminToDashboard() {
 
       try {
         const token = await getToken();
-        const result = await validarAdmin(token ?? undefined);
+        const result = await obtenerPerfilAcceso(token ?? undefined);
 
         if (!isMounted) return;
 
-        if (result.isAdmin && pathname !== "/administrador") {
+        if (result?.isAdmin && pathname !== "/administrador") {
           router.replace("/administrador");
           return;
         }

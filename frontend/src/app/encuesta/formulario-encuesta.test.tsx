@@ -64,12 +64,18 @@ describe("Formulario de encuesta", () => {
     fireEvent.click(screen.getByRole("button", { name: /Omnivoro|Omnívoro/i }));
     fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
 
-    fireEvent.change(screen.getByLabelText(/Monto estimado/i), { target: { value: "4500 pesos" } });
+    fireEvent.change(screen.getByLabelText(/Monto estimado/i), { target: { value: "4500" } });
+    fireEvent.change(screen.getByLabelText(/Comentarios descriptivos|Comentarios \/ Observaciones/i), {
+      target: { value: "Perfil sensorial parejo y sin defectos." },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /^Me gusta4$/i }));
     fireEvent.click(screen.getAllByRole("button", { name: /^Si$|^Sí$/i })[0]);
     fireEvent.click(screen.getAllByRole("button", { name: /^Si$|^Sí$/i })[1]);
+    fireEvent.change(screen.getByLabelText(/Comentarios afectivos|Comentarios finales/i), {
+      target: { value: "Me gustó el sabor y la textura general." },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Enviar evaluacion|Enviar evaluación/i }));
 
     await waitFor(() => {

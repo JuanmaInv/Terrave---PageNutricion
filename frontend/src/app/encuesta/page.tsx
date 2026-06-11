@@ -46,6 +46,7 @@ import { useRedirectAdminToDashboard } from "@/hooks/useRedirectAdminToDashboard
 import {
   sanitizeWillingnessToPay,
   validateSurveyStepOne,
+  validateSurveyStepTwo,
   validateSurveySubmission,
 } from "@/lib/survey/survey-validation";
 import { AUTH_ENABLED } from "@/lib/auth";
@@ -569,6 +570,13 @@ function EncuestaPageContent() {
         return;
       }
     }
+    if (step === 2) {
+      const error = validateSurveyStepTwo({ willingnessToPay, descriptiveComments });
+      if (error) {
+        toast.error(error);
+        return;
+      }
+    }
     runWithLoader(() => {
       setStep((s) => Math.min(3, s + 1));
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -588,17 +596,31 @@ function EncuestaPageContent() {
       sex,
       diet,
       attrs,
+      descriptiveComments,
       acceptance,
       liked,
       consumeAgain,
       recommend,
       willingnessToPay,
+      affectiveComments,
     });
 
     if (error) {
       toast.error(error);
       if (error === "Faltan datos generales.") {
         setStep(1);
+      } else if (
+        error === "Completá el monto estimado para continuar." ||
+        error === "Ingresá solo números para el monto estimado." ||
+        error === "Completá los comentarios u observaciones para continuar."
+      ) {
+        setStep(2);
+      } else if (
+        error === "Completá la evaluación afectiva." ||
+        error === "La recomendación debe estar entre 1 y 5." ||
+        error === "Completá los comentarios finales antes de enviar."
+      ) {
+        setStep(3);
       }
       return;
     }

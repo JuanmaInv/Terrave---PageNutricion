@@ -14,6 +14,14 @@ export interface DashboardSummary {
   inProgressCount: number;
 }
 
+export interface AccessProfile {
+  email: string;
+  role: "admin" | "cliente";
+  isAdmin: boolean;
+  canAccessDashboard: boolean;
+  canAnswerSurvey: boolean;
+}
+
 export interface SurveySessionDraft {
   clientSessionKey: string;
   currentStep?: number;
@@ -216,6 +224,29 @@ export async function validarAdmin(
     });
   }
   return { isAdmin: false };
+}
+
+export async function sincronizarUsuarioClerk(
+  token?: string,
+): Promise<AccessProfile | null> {
+  if (!hasBackend() || !token) {
+    return null;
+  }
+
+  return await request("/admin/sync-user", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function obtenerPerfilAcceso(token?: string): Promise<AccessProfile | null> {
+  if (!hasBackend() || !token) {
+    return null;
+  }
+
+  return await request("/admin/access", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 // ---------------------------------------------------------------------------

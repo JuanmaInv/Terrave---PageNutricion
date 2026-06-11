@@ -17,7 +17,7 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { useSurveyFilters } from "@/hooks/useSurveyFilters";
 import { useSurveyResumen } from "@/hooks/useSurveyResumen";
 import { useSurveyStats } from "@/hooks/useSurveyStats";
-import { descargarBlob, exportarExcel, exportarPDF, validarAdmin } from "@/lib/api";
+import { descargarBlob, exportarExcel, exportarPDF, obtenerPerfilAcceso } from "@/lib/api";
 
 const TEST_AUTH_MODE = process.env.NEXT_PUBLIC_E2E_AUTH_MODE === "true";
 
@@ -155,7 +155,9 @@ function AdminTestGate() {
 export function AdminAuthorized() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [isAuthorizing, setIsAuthorizing] = useState(true);
-  const [hasAccess, setHasAccess] = useState(false);
+  const [accessState, setAccessState] = useState<{ isAdmin: boolean }>({
+    isAdmin: false,
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -164,10 +166,16 @@ export function AdminAuthorized() {
       if (!isLoaded || !isSignedIn) return;
       try {
         const token = await getToken();
-        const result = await validarAdmin(token ?? undefined);
-        if (isMounted) setHasAccess(result.isAdmin);
+        const result = await obtenerPerfilAcceso(token ?? undefined);
+        if (isMounted) {
+          setAccessState({
+            isAdmin: Boolean(result?.isAdmin),
+          });
+        }
       } catch {
-        if (isMounted) setHasAccess(false);
+        if (isMounted) {
+          setAccessState({ isAdmin: false });
+        }
       } finally {
         if (isMounted) setIsAuthorizing(false);
       }
@@ -188,7 +196,7 @@ export function AdminAuthorized() {
     );
   }
 
-  if (!hasAccess) {
+  if (!accessState.isAdmin) {
     return <AdminRestrictedState />;
   }
 

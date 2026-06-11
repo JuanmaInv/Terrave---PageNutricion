@@ -17,7 +17,55 @@ describe("Controladores HTTP", () => {
     await expect(controller.getMe()).resolves.toEqual({ isAdmin: true });
   });
 
-  it("debe mapear la respuesta de sesión creada en EncuestasController", async () => {
+  it("debe delegar sync-user en AdminController", async () => {
+    const adminService = {
+      getTokenFromAuthorization: vi.fn().mockReturnValue("token-sync"),
+      syncUserFromToken: vi.fn().mockResolvedValue({
+        email: "cliente@example.com",
+        role: "cliente",
+        isAdmin: false,
+        canAccessDashboard: false,
+        canAnswerSurvey: true,
+      }),
+    };
+    const controller = new AdminController(adminService);
+
+    await expect(controller.syncUser("Bearer token-sync")).resolves.toEqual({
+      email: "cliente@example.com",
+      role: "cliente",
+      isAdmin: false,
+      canAccessDashboard: false,
+      canAnswerSurvey: true,
+    });
+    expect(adminService.getTokenFromAuthorization).toHaveBeenCalledWith("Bearer token-sync");
+    expect(adminService.syncUserFromToken).toHaveBeenCalledWith("token-sync");
+  });
+
+  it("debe delegar access en AdminController", async () => {
+    const adminService = {
+      getTokenFromAuthorization: vi.fn().mockReturnValue("token-access"),
+      getAccessProfileFromToken: vi.fn().mockResolvedValue({
+        email: "admin@example.com",
+        role: "admin",
+        isAdmin: true,
+        canAccessDashboard: true,
+        canAnswerSurvey: false,
+      }),
+    };
+    const controller = new AdminController(adminService);
+
+    await expect(controller.getAccess("Bearer token-access")).resolves.toEqual({
+      email: "admin@example.com",
+      role: "admin",
+      isAdmin: true,
+      canAccessDashboard: true,
+      canAnswerSurvey: false,
+    });
+    expect(adminService.getTokenFromAuthorization).toHaveBeenCalledWith("Bearer token-access");
+    expect(adminService.getAccessProfileFromToken).toHaveBeenCalledWith("token-access");
+  });
+
+  it("debe mapear la respuesta de sesion creada en EncuestasController", async () => {
     const controller = new EncuestasController({
       async createSession() {
         return {
@@ -35,7 +83,7 @@ describe("Controladores HTTP", () => {
     });
   });
 
-  it("debe mapear la respuesta de sesión actualizada en EncuestasController", async () => {
+  it("debe mapear la respuesta de sesion actualizada en EncuestasController", async () => {
     const controller = new EncuestasController({
       async updateSession(id) {
         return {
@@ -46,7 +94,9 @@ describe("Controladores HTTP", () => {
       },
     });
 
-    await expect(controller.updateSession("session-2", { clientSessionKey: "client-2" })).resolves.toEqual({
+    await expect(
+      controller.updateSession("session-2", { clientSessionKey: "client-2" }),
+    ).resolves.toEqual({
       id: "session-2",
       startedAt: "2026-06-03T10:00:00.000Z",
       updatedAt: "2026-06-03T10:06:00.000Z",
@@ -69,7 +119,7 @@ describe("Controladores HTTP", () => {
     });
   });
 
-  it("debe delegar consultas de resumen y estadísticas en EstadisticasController", async () => {
+  it("debe delegar consultas de resumen y estadisticas en EstadisticasController", async () => {
     const service = {
       async getDashboardSummary(query) {
         return { ...query, completedCount: 5, inProgressCount: 2 };
@@ -119,6 +169,8 @@ describe("Controladores HTTP", () => {
       },
     });
 
-    await expect(controller.exportExcel({}, { set() {}, send() {} })).rejects.toThrow(/Excel export failed/);
+    await expect(controller.exportExcel({}, { set() {}, send() {} })).rejects.toThrow(
+      /Excel export failed/,
+    );
   });
 });

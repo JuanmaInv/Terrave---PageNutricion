@@ -124,6 +124,139 @@ describe("AdminService", () => {
     process.env.CLERK_SECRET_KEY = originalSecret;
   });
 
+  it("debe rechazar obtener el perfil de acceso cuando falta la secret de Clerk", async () => {
+    const originalSecret = process.env.CLERK_SECRET_KEY;
+    delete process.env.CLERK_SECRET_KEY;
+    const service = new AdminService({ query: async () => ({ rowCount: 0, rows: [] }) });
+
+    await expect(service.getAccessProfileFromToken("token")).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
+  it("debe devolver acceso cliente cuando el usuario autenticado no existe en la base", async () => {
+    const originalSecret = process.env.CLERK_SECRET_KEY;
+    process.env.CLERK_SECRET_KEY = "sk_test_123";
+    const service = new AdminService({
+      async query() {
+        return { rowCount: 0, rows: [] };
+      },
+    });
+    service.verifyClerkJwt = vi.fn().mockResolvedValue({ sub: "user_123" });
+    service.buildClerkClient = vi.fn(() => ({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          primaryEmailAddress: { emailAddress: "nuevo@example.com" },
+          firstName: "Nuevo",
+          lastName: "Usuario",
+        }),
+      },
+    }));
+
+    await expect(service.getAccessProfileFromToken("token")).resolves.toEqual({
+      email: "nuevo@example.com",
+      role: "cliente",
+      isAdmin: false,
+      canAccessDashboard: false,
+      canAnswerSurvey: true,
+    });
+    process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
+  it("debe devolver acceso admin cuando el usuario existe activo con rol admin", async () => {
+    const originalSecret = process.env.CLERK_SECRET_KEY;
+    process.env.CLERK_SECRET_KEY = "sk_test_123";
+    const service = new AdminService({
+      async query() {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              id: "user-1",
+              nombre: "Ada Lovelace",
+              email: "admin@example.com",
+              rol: "admin",
+              activo: true,
+            },
+          ],
+        };
+      },
+    });
+    service.verifyClerkJwt = vi.fn().mockResolvedValue({ sub: "user_123" });
+    service.buildClerkClient = vi.fn(() => ({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          primaryEmailAddress: { emailAddress: "ADMIN@EXAMPLE.COM" },
+          firstName: "Ada",
+          lastName: "Lovelace",
+        }),
+      },
+    }));
+
+    await expect(service.getAccessProfileFromToken("token")).resolves.toEqual({
+      email: "admin@example.com",
+      role: "admin",
+      isAdmin: true,
+      canAccessDashboard: true,
+      canAnswerSurvey: false,
+    });
+    process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
+  it("debe degradar a cliente cuando el usuario existe pero no tiene acceso admin activo", async () => {
+    const originalSecret = process.env.CLERK_SECRET_KEY;
+    process.env.CLERK_SECRET_KEY = "sk_test_123";
+    const service = new AdminService({
+      async query() {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              id: "user-2",
+              nombre: "Grace Hopper",
+              email: "grace@example.com",
+              rol: "admin",
+              activo: false,
+            },
+          ],
+        };
+      },
+    });
+    service.verifyClerkJwt = vi.fn().mockResolvedValue({ sub: "user_456" });
+    service.buildClerkClient = vi.fn(() => ({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          primaryEmailAddress: { emailAddress: "grace@example.com" },
+        }),
+      },
+    }));
+
+    await expect(service.getAccessProfileFromToken("token")).resolves.toEqual({
+      email: "grace@example.com",
+      role: "cliente",
+      isAdmin: false,
+      canAccessDashboard: false,
+      canAnswerSurvey: true,
+    });
+    process.env.CLERK_SECRET_KEY = originalSecret;
+  });
+
+  it("debe delegar syncUserFromToken en getAccessProfileFromToken", async () => {
+    const service = new AdminService({ query: async () => ({ rowCount: 0, rows: [] }) });
+    const expectedProfile = {
+      email: "sync@example.com",
+      role: "cliente",
+      isAdmin: false,
+      canAccessDashboard: false,
+      canAnswerSurvey: true,
+    };
+    service.getAccessProfileFromToken = vi.fn().mockResolvedValue(expectedProfile);
+
+    await expect(service.syncUserFromToken("token-sync")).resolves.toEqual(expectedProfile);
+    expect(service.getAccessProfileFromToken).toHaveBeenCalledWith("token-sync");
+  });
+
   it("debe exponer un cliente de Clerk al construirlo con la secret configurada", () => {
     const service = new AdminService({ query: async () => ({ rowCount: 0, rows: [] }) });
 

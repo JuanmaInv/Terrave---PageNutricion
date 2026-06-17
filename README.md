@@ -1,39 +1,45 @@
-# TERRAVÉ
+# TERRAVE
 
 Plataforma web para evaluacion sensorial de medallones de lenteja, desarrollada como proyecto integrador entre Nutricion e Ingenieria en Sistemas de Informacion.
 
 ## Stack utilizado
 
-![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
-![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)
-![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791?logo=postgresql&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-Base%20de%20datos-3ECF8E?logo=supabase&logoColor=white)
-![Clerk](https://img.shields.io/badge/Clerk-Autenticacion-6C47FF?logo=clerk&logoColor=white)
-![Playwright](https://img.shields.io/badge/Playwright-E2E-45BA4B?logo=playwright&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-Testing-6E9F18?logo=vitest&logoColor=white)
+<p align="left">
+  <img src="https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&amp;logo=nextdotjs&amp;logoColor=white" alt="Next.js">
+  <img src="https://img.shields.io/badge/React-19-149ECA?style=for-the-badge&amp;logo=react&amp;logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&amp;logo=typescript&amp;logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&amp;logo=tailwindcss&amp;logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/NestJS-10-E0234E?style=for-the-badge&amp;logo=nestjs&amp;logoColor=white" alt="NestJS">
+</p>
+<p align="left">
+  <img src="https://img.shields.io/badge/PostgreSQL-Base_de_datos-336791?style=for-the-badge&amp;logo=postgresql&amp;logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Supabase-Storage_%26_DB-3ECF8E?style=for-the-badge&amp;logo=supabase&amp;logoColor=white" alt="Supabase">
+  <img src="https://img.shields.io/badge/Clerk-Autenticacion-6C47FF?style=for-the-badge&amp;logo=clerk&amp;logoColor=white" alt="Clerk">
+  <img src="https://img.shields.io/badge/Playwright-E2E-45BA4B?style=for-the-badge&amp;logo=playwright&amp;logoColor=white" alt="Playwright">
+  <img src="https://img.shields.io/badge/Vitest-Testing-729B1B?style=for-the-badge&amp;logo=vitest&amp;logoColor=white" alt="Vitest">
+</p>
 
 ## Sobre el proyecto
 
 El sistema resuelve dos necesidades principales:
 
-- Permitir que panelistas completen una encuesta sensorial publica, anonima y multi-step;
+- Permitir que panelistas completen una encuesta sensorial publica, anonima y multi-step.
 - Permitir que el equipo administrador consulte estadisticas, vea distribuciones, exporte resultados y supervise el estado general de las encuestas.
 
 La solucion se divide en:
 
-- `frontend/`: aplicacion Next.js para Home, Encuesta y Panel Administrador;
-- `backend/`: API NestJS con reglas de negocio, seguridad, estadisticas y exportacion Excel;
-- `database/`: esquema SQL y politicas recomendadas para la base de datos;
+- `frontend/`: aplicacion Next.js para Home, Encuesta y Panel Administrador.
+- `backend/`: API NestJS con reglas de negocio, seguridad, estadisticas y exportacion Excel.
+- `database/`: esquema SQL y politicas recomendadas para la base de datos.
 - `docs/`: documentacion tecnica, funcional, pruebas y evidencia complementaria.
 
 ## Diagrama UML de clases (alto nivel)
 
-![Diagrama UML de clases (alto nivel)](docs/diagrams/nutrilen-class-diagram.svg)
+<p align="center">
+  <img src="docs/diagrams/nutrilen-class-diagram.svg" alt="Diagrama UML de clases (alto nivel)" width="100%">
+</p>
 
-Fuente editable del diagrama: [docs/diagrams/nutrilen-class-diagram.mmd](docs/diagrams/nutrilen-class-diagram.mmd). Para verlo mas grande, abrí el SVG: [docs/diagrams/nutrilen-class-diagram.svg](docs/diagrams/nutrilen-class-diagram.svg).
+Fuente editable del diagrama: [docs/diagrams/nutrilen-class-diagram.mmd](docs/diagrams/nutrilen-class-diagram.mmd). Para verlo mas grande, abri el SVG: [docs/diagrams/nutrilen-class-diagram.svg](docs/diagrams/nutrilen-class-diagram.svg).
 
 ## Requisitos previos
 
@@ -47,6 +53,11 @@ Antes de ejecutar el proyecto, asegurate de tener instalado:
 ## Instalacion
 
 ### 1. Clonar el repositorio
+
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd NutriLen---EncuestaDeProducto
+```
 
 ### 2. Instalar dependencias del frontend
 
@@ -85,7 +96,7 @@ Variables principales:
 
 - `NEXT_PUBLIC_API_URL`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `NEXT_PUBLIC_CLARITY_PROJECT_ID` (opcional)
+- `NEXT_PUBLIC_CLARITY_PROJECT_ID` opcional
 
 ### Backend
 
@@ -135,7 +146,7 @@ Por defecto:
 
 ## Rutas principales
 
-- `/` Home del producto
+- `/` home del producto
 - `/encuesta` flujo de encuesta publica
 - `/administrador` panel administrativo
 
@@ -181,10 +192,10 @@ pnpm test:security
 
 ## Que cubren las pruebas
 
-- `Vitest`: unitarios y componentes
-- `React Testing Library`: comportamiento visual controlado
-- `Playwright`: flujos completos del encuestado y del administrador
-- `Lighthouse CI`: auditorias de performance y accesibilidad en frontend
+- `Vitest`: pruebas unitarias y de componentes.
+- `React Testing Library`: comportamiento visual controlado.
+- `Playwright`: flujos completos del encuestado y del administrador.
+- `Lighthouse CI`: auditorias de performance y accesibilidad en frontend.
 
 Documentacion relacionada:
 
@@ -199,7 +210,8 @@ Documentacion relacionada:
 El frontend esta preparado para usar Microsoft Clarity desde:
 
 - `frontend/src/app/layout.tsx`
-  Se activa solo si existe:
+
+Se activa solo si existe:
 
 ```env
 NEXT_PUBLIC_CLARITY_PROJECT_ID=tu_project_id
@@ -207,9 +219,9 @@ NEXT_PUBLIC_CLARITY_PROJECT_ID=tu_project_id
 
 Si la variable esta vacia:
 
-- no se carga el script;
-- no afecta el diseno;
-- no afecta la suite E2E.
+- no se carga el script
+- no afecta el diseno
+- no afecta la suite E2E
 
 ### Lighthouse CI
 
@@ -263,7 +275,7 @@ Publica artefactos de:
 - coverage
 - build del backend
 
-## Documentación realizada durante el desarrollo del proyecto:
+## Documentacion realizada durante el desarrollo del proyecto
 
 - [docs/DOCUMENTACION_TECNICA_FUNCIONAL_NUTRILEN.md](docs/DOCUMENTACION_TECNICA_FUNCIONAL_NUTRILEN.md)
 - [docs/despliegue-vercel-supabase.md](docs/despliegue-vercel-supabase.md)

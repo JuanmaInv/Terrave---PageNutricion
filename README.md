@@ -36,10 +36,10 @@ La solucion se divide en:
 ## Diagrama UML de clases (alto nivel)
 
 <p align="center">
-  <img src="docs/diagrams/nutrilen-class-diagram.svg" alt="Diagrama UML de clases (alto nivel)" width="100%">
+  <img src="docs/diagrams/nutrilen-class-diagram-final.svg" alt="Diagrama UML de clases (alto nivel)" width="100%">
 </p>
 
-Fuente editable del diagrama: [docs/diagrams/nutrilen-class-diagram.mmd](docs/diagrams/nutrilen-class-diagram.mmd). Para verlo mas grande, abri el SVG: [docs/diagrams/nutrilen-class-diagram.svg](docs/diagrams/nutrilen-class-diagram.svg).
+Fuente editable del diagrama: [docs/diagrams/nutrilen-class-diagram.mmd](docs/diagrams/nutrilen-class-diagram.mmd). Para verlo mas grande, abri el SVG: [docs/diagrams/nutrilen-class-diagram-final.svg](docs/diagrams/nutrilen-class-diagram-final.svg).
 
 ## Requisitos previos
 

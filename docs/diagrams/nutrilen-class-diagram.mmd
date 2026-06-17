@@ -1,0 +1,101 @@
+classDiagram
+direction LR
+
+class usuarios {
+  +id: string
+  +activo: boolean
+  +fecha_registro: datetime
+  +nombre: string
+  +email: string
+  +rol: string
+}
+
+class encuestas {
+  +id: string
+  +usuario_id: string?
+  +fecha: datetime
+  +sexo: string
+  +dieta: string
+  +color: number
+  +aroma: number
+  +firmeza: number
+  +untuosidad: number
+  +sabor_tostado: number
+  +persistencia: number
+  +aceptacion: number
+  +liked: string
+  +consume_again: string
+  +recommend: number
+}
+
+class encuesta_sesiones {
+  +id: string
+  +encuesta_id: string?
+  +client_session_key: string
+  +estado: string
+  +paso_actual: number
+  +fecha_inicio: datetime
+  +fecha_actualizacion: datetime
+  +fecha_envio: datetime?
+}
+
+class EncuestasController {
+  +create(body)
+  +createSession(body)
+  +updateSession(id, body)
+}
+
+class EncuestasService {
+  +create(dto)
+  +createSession(dto)
+  +updateSession(id, dto)
+}
+
+class EncuestasRepository {
+  +create(dto, id, fecha)
+  +createSession(id, dto)
+  +updateSession(id, dto)
+}
+
+class EstadisticasController {
+  +getSummary(query)
+  +getStats(query)
+  +exportExcel(query, res)
+}
+
+class EstadisticasService {
+  +getSurveys(query)
+  +getDashboardSummary(query)
+  +getExcelReport(query)
+}
+
+class EstadisticasRepository {
+  +findAll(query)
+  +getDashboardSummary(query)
+}
+
+class AdminGuard {
+  +canActivate(context)
+}
+
+class AdminService {
+  +getTokenFromAuthorization(...)
+  +validateAdminToken(...)
+  +getAccessProfileFromToken(...)
+}
+
+usuarios "1" <-- "0..*" encuestas : usuario_id
+encuestas "1" <-- "0..1" encuesta_sesiones : encuesta_id
+
+EncuestasController --> EncuestasService
+EncuestasService --> EncuestasRepository
+EncuestasRepository ..> encuestas
+EncuestasRepository ..> encuesta_sesiones
+
+EstadisticasController --> EstadisticasService
+EstadisticasService --> EstadisticasRepository
+EstadisticasRepository ..> encuestas
+EstadisticasRepository ..> encuesta_sesiones
+
+EstadisticasController --> AdminGuard
+AdminGuard --> AdminService
